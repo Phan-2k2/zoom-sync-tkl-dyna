@@ -28,9 +28,9 @@ cargo run
   - [x] Download rate
 - [x] Fetch current weather report
 - [x] Fetch GPU temp (nvidia only)
-- [ ] Fetch CPU temp
+- [x] Fetch CPU temp
 - [ ] Monitor download rate
-- [ ] CLI options
+- [x] CLI options
 - [ ] System tray menu
   - [ ] Poll and autodetect new keyboards
   - [ ] Update intervals for each value

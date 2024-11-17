@@ -6,8 +6,9 @@ edition = "2021"
 [dependencies]
 # runtime and scaffalding
 tokio = { version = "1.41", features = ["full"] }
-thiserror = "2.0.3"
+bpaf = { version = "0.9", features = ["derive"] }
 strum = { version = "0.26", features = ["derive"] }
+thiserror = "2.0.3"
 
 # cross-platform hardware api
 hidapi = "2.6.3"

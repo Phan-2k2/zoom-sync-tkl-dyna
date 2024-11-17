@@ -64,7 +64,7 @@ pub async fn get_weather(lat_long: Option<(f32, f32)>, farenheit: bool) -> (Icon
     let (lat, long) = match lat_long {
         Some((lat, long)) => (lat, long),
         None => {
-            println!("fetching geolocation from ipinfo...");
+            println!("fetching geolocation from ipinfo ...");
             let mut ipinfo = IpInfo::new(ipinfo::IpInfoConfig {
                 token: None,
                 ..Default::default()
@@ -76,7 +76,7 @@ pub async fn get_weather(lat_long: Option<(f32, f32)>, farenheit: bool) -> (Icon
         }
     };
 
-    println!("fetching current weather from open-meteo...");
+    println!("fetching current weather from open-meteo for [{lat}, {long}] ...");
     let res = OpenMeteo::new()
         .coordinates(lat, long)
         .unwrap()
