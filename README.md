@@ -78,15 +78,16 @@ Available options:
   - [x] CPU/GPU temp
   - [x] Download rate
 - [x] Fetch current weather report
-- [x] Fetch GPU temp (nvidia only)
 - [x] Fetch CPU temp
+- [x] Fetch Nvidia GPU temp
+- [ ] Fetch AMD GPU temp
 - [ ] Monitor download rate
 - [x] CLI arguments
 - [ ] System tray menu
   - [ ] Poll and autodetect new keyboards
   - [ ] Update intervals for each value
-- [ ] Package release for version 1.0
+- [ ] Package releases
   - [ ] Crates.io
   - [ ] Nixpkgs
   - [ ] Windows
-- [ ] AMD GPU temp
+  - [ ] OSX
