@@ -2,6 +2,23 @@
 
 Cross-platform utility to sync Zoom65 v3 screen modules.
 
+## Comparison
+
+|                     | zoom-sync        | MeletrixID                      |
+| ------------------- | ---------------- | ------------------------------- |
+| Supported platforms | cross-platform   | Windows, OSX                    |
+| FOSS ?              | FOSS. Always.    | Free, but not open sourced      |
+| Languages           | English          | Chinese or english              |
+| Weather api         | [open-meteo](https://open-meteo.com) | Unknown centralized service |
+| Geolocation api     | [ipinfo](https://ipinfo.io) or manual | Bundled into weather api |
+| VPN workaround      | With manual geo  | Only uses vpn's ip for location |
+| Temperature units   | °C or °F         | °C only                         |
+| Time sync           | Supported        | Supported                       |
+| CPU temperature     | Supported        | Supported                       |
+| GPU temperature     | Nvidia           | Supported ?                     |
+| Download rate       | WIP              | Supported                       |
+| Future-proof        | Will always work | Overflow errors after year 2255 |
+
 ## Third Party Services
 
 The following free third-party services are used to fetch some information:
@@ -11,12 +28,12 @@ The following free third-party services are used to fetch some information:
 
 ## Installation
 
-#### Requirements
-
-- libudev (linux)
-- openssl
-
 ### Source
+
+Requirements:
+
+- libudev (linux, included with systemd)
+- openssl
 
 ```
 git clone https://github.com/ozwaldorf/zoom-sync && cd zoom-sync
@@ -72,3 +89,4 @@ Available options:
   - [ ] Crates.io
   - [ ] Nixpkgs
   - [ ] Windows
+- [ ] AMD GPU temp
