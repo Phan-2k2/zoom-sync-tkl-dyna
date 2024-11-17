@@ -1,35 +1,22 @@
+//! High level abstraction for interacting with zoom65v3 screen modules
+
 use std::sync::LazyLock;
 
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
-use hidapi::{HidApi, HidDevice, HidError};
+use consts::commands;
+use hidapi::{HidApi, HidDevice};
 
-use crate::weather::Icon;
+use crate::types::Icon;
+use crate::types::Zoom65Error;
 
-mod consts;
+pub mod consts;
+pub mod types;
 
 /// Lazy handle to hidapi
 static API: LazyLock<HidApi> = LazyLock::new(|| HidApi::new().expect("failed to init hidapi"));
 
-#[derive(thiserror::Error)]
-pub enum Zoom65Error {
-    #[error("failed to find device")]
-    DeviceNotFound,
-    #[error("firmware version is unknown. open an issue for support")]
-    UnknownFirmwareVersion,
-    #[error("keyboard responded with error while updating, byte 1 == 88 && byte 2 == 0")]
-    UpdateCommandFailed,
-    #[error("hid device error: {_0}")]
-    Hid(#[from] HidError),
-}
-
-impl std::fmt::Debug for Zoom65Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self}")
-    }
-}
-
-/// High level handle for managing a zoom65 v3 keyboard
-pub(crate) struct Zoom65v3 {
+/// High level abstraction for managing a zoom65 v3 keyboard
+pub struct Zoom65v3 {
     device: HidDevice,
     buf: [u8; 64],
 }
@@ -70,15 +57,15 @@ impl Zoom65v3 {
     }
 
     /// Internal method to send and parse an update command
-    fn update(&mut self, slot: u8, slice: &[u8]) -> Result<(), Zoom65Error> {
+    fn update(&mut self, method_id: [u8; 2], slice: &[u8]) -> Result<(), Zoom65Error> {
         // Construct command sequence
         let mut buf = [0u8; 33];
         buf[0] = 0x0;
         buf[1] = 88;
         buf[2] = slice.len() as u8 + 3;
         buf[3] = 165;
-        buf[4] = 1;
-        buf[5] = slot;
+        buf[4] = method_id[0];
+        buf[5] = method_id[1];
         buf[6..6 + slice.len()].copy_from_slice(slice);
 
         // Write to device and read response
@@ -93,10 +80,28 @@ impl Zoom65v3 {
             .ok_or(Zoom65Error::UpdateCommandFailed)
     }
 
+    /// Increment the screen position
+    #[inline(always)]
+    pub fn screen_up(&mut self) -> Result<(), Zoom65Error> {
+        self.update(commands::ZOOM65_SCREEN_UP, &[])
+    }
+
+    /// Decrement the screen position
+    #[inline(always)]
+    pub fn screen_down(&mut self) -> Result<(), Zoom65Error> {
+        self.update(commands::ZOOM65_SCREEN_DOWN, &[])
+    }
+
+    /// Switch the active screen
+    #[inline(always)]
+    pub fn screen_switch(&mut self) -> Result<(), Zoom65Error> {
+        self.update(commands::ZOOM65_SCREEN_SWITCH, &[])
+    }
+
     /// Update the keyboards current time
     pub fn set_time<Tz: TimeZone>(&mut self, time: DateTime<Tz>) -> Result<(), Zoom65Error> {
         self.update(
-            16,
+            commands::ZOOM65_SET_TIME_ID,
             &[
                 // Provide the current year without the century.
                 // This prevents overflows on the year 2256 (meletrix web ui just subtracts 2000)
@@ -118,7 +123,10 @@ impl Zoom65v3 {
         low: u8,
         high: u8,
     ) -> Result<(), Zoom65Error> {
-        self.update(32, &[icon as u8, current, low, high])
+        self.update(
+            commands::ZOOM65_SET_WEATHER_ID,
+            &[icon as u8, current, low, high],
+        )
     }
 
     /// Update the keyboards current system info
@@ -143,8 +151,13 @@ impl Zoom65v3 {
         let download_r = download_rate % 2.56;
 
         self.update(
-            64,
+            commands::ZOOM65_SET_SYSINFO_ID,
             &[cpu_temp, gpu_temp, download_m as u8, download_r as u8],
         )
+    }
+
+    /// Reset the screen back to the meletrix logo
+    pub fn reset_screen(&mut self) -> Result<(), Zoom65Error> {
+        self.update(commands::ZOOM65_RESET_SCREEN_ID, &[])
     }
 }

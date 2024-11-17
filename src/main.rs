@@ -1,8 +1,10 @@
+//! Main cli binary
+
 use std::{error::Error, time::Duration};
+use zoom_sync_raw::Zoom65v3;
 
 mod info;
 mod weather;
-mod zoom65;
 
 #[derive(Clone, Debug, bpaf::Bpaf)]
 #[bpaf(options, version, max_width(80), descr(env!("CARGO_PKG_DESCRIPTION")))]
@@ -34,7 +36,7 @@ struct Cli {
 async fn main() -> Result<(), Box<dyn Error>> {
     let mut args = cli().run();
 
-    let mut keyboard = zoom65::Zoom65v3::open()?;
+    let mut keyboard = Zoom65v3::open()?;
     let version = keyboard
         .get_version()
         .map_err(|e| format!("failed to get keyboard version: {e}"))?;
@@ -64,13 +66,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         keyboard
             .set_system_info(
-                cpu_temp,
-                gpu_temp,
-                // TODO: fetch download
+                cpu_temp, gpu_temp, // TODO: fetch download
                 0.,
             )
             .map_err(|e| format!("failed to set system info: {e}"))?;
-        println!("updated system info {{ cpu_temp: {cpu_temp}, gpu_temp: {gpu_temp}, download: 0.0 }}");
+        println!(
+            "updated system info {{ cpu_temp: {cpu_temp}, gpu_temp: {gpu_temp}, download: 0.0 }}"
+        );
 
         // Attempt to backfill coordinates from ipinfo if not provided.
         // Will keep retrying on each iteration until they are found.

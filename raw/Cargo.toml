@@ -1,0 +1,11 @@
+[package]
+name = "zoom-sync-raw"
+version = "0.1.0"
+description = "Reverse engineered raw bindings to the zoom65v3 screen module"
+edition = "2021"
+
+[dependencies]
+strum = { version = "0.26", features = ["derive"] }
+thiserror = "2.0"
+hidapi = "2.6"
+chrono.workspace = true

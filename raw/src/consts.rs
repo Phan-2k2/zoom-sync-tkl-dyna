@@ -12,6 +12,14 @@ pub mod commands {
         0, 0, 0,
     ];
 
+    pub const ZOOM65_SCREEN_SWITCH: [u8; 2] = [0, 32];
+    pub const ZOOM65_SCREEN_DOWN: [u8; 2] = [0, 33];
+    pub const ZOOM65_SCREEN_UP: [u8; 2] = [0, 34];
+    pub const ZOOM65_SET_TIME_ID: [u8; 2] = [1, 16];
+    pub const ZOOM65_SET_WEATHER_ID: [u8; 2] = [1, 32];
+    pub const ZOOM65_SET_SYSINFO_ID: [u8; 2] = [1, 64];
+    pub const ZOOM65_RESET_SCREEN_ID: [u8; 2] = [1, 255];
+
     #[allow(unused)]
     /// TODO: should we expose functionality to get this info? is it useful?
     ///       might be nice to have a drop down menu when this becomes a daemon..

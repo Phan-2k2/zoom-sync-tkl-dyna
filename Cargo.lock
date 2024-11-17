@@ -2264,12 +2264,20 @@ version = "0.1.0"
 dependencies = [
  "bpaf",
  "chrono",
- "hidapi",
  "ipinfo",
  "nvml-wrapper",
  "open-meteo-api",
- "strum",
  "sysinfo",
- "thiserror 2.0.3",
  "tokio",
+ "zoom-sync-raw",
+]
+
+[[package]]
+name = "zoom-sync-raw"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "hidapi",
+ "strum",
+ "thiserror 2.0.3",
 ]

@@ -4,19 +4,21 @@ version = "0.1.0"
 description = "Cross-platform utility for syncing zoom65v3 screen modules"
 edition = "2021"
 
+[workspace.dependencies]
+chrono = "0.4.38" # local time
+
 [dependencies]
+# keyboard management
+zoom-sync-raw = { path = "./raw", version = "0.1.0" }
+
 # runtime and scaffalding
 tokio = { version = "1.41", features = ["full"] }
 bpaf = { version = "0.9", features = ["derive"] }
-strum = { version = "0.26", features = ["derive"] }
-thiserror = "2.0.3"
-
-# cross-platform hardware api
-hidapi = "2.6.3"
 
 # data fetching
-chrono = "0.4.38" # local time
+chrono.workspace = true
 ipinfo = "3.0.1" # geolocation
 open-meteo-api = "0.1.4" # weather
 nvml-wrapper = "0.10.0" # nvidia temp
 sysinfo = "0.32.0" # cpu temp
+
