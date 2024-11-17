@@ -1,22 +1,56 @@
 # zoom-sync
 
-Cross-platform, open source utility to sync time, weather, and system info on Zoom65 v3 screen modules.
+Cross-platform utility to sync Zoom65 v3 screen modules.
 
-### Third Party Services
+## Third Party Services
 
 The following free third-party services are used to fetch some information:
 
 - Weather forcasting: [open-meteo](https://open-meteo.com)
-- Geolocation (for weather): [ipinfo.io](https://ipinfo.io)
+- Geolocation (optional for automatic weather coordinates): [ipinfo.io](https://ipinfo.io)
 
-## Usage
+## Installation
+
+#### Requirements
+
+- libudev (linux)
+- openssl
+
+### Source
+
+```
+git clone https://github.com/ozwaldorf/zoom-sync && cd zoom-sync
+cargo install --path .
+```
+
+### Nix
 
 > Note: On nixos, you must use the flake for nvidia gpu temp to work
 
 ```
-nix run
-# or
-cargo run
+nix run github:ozwaldorf/zoom-sync
+```
+
+## Usage
+
+```
+Usage: zoom-sync [-r=SECS] [-f] [-g=ID] [-t=LABEL] [-c=<LAT,LONG>]
+
+Available options:
+    -r, --refresh=SECS       Refresh data every given number of seconds
+                             [default: 30]
+    -f, --farenheit          Use farenheit for all temperatures. May cause
+                             clamping for anything greater than 99F
+                             [default: false]
+    -g, --gpu=ID             Use a specific gpu device id
+                             [default: 0]
+    -t, --temp=LABEL         Search for a specific cpu temp component
+                             [default: coretemp Package]
+    -c, --coords=<LAT,LONG>  Optional coordinates to use for open-meteo weather
+                             forcasting. If unset, falls back to ipinfo.com for
+                             location.
+    -h, --help               Prints help information
+    -V, --version            Prints version information
 ```
 
 ## Feature Checklist
@@ -30,7 +64,7 @@ cargo run
 - [x] Fetch GPU temp (nvidia only)
 - [x] Fetch CPU temp
 - [ ] Monitor download rate
-- [x] CLI options
+- [x] CLI arguments
 - [ ] System tray menu
   - [ ] Poll and autodetect new keyboards
   - [ ] Update intervals for each value

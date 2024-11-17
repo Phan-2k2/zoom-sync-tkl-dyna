@@ -10,7 +10,7 @@ mod consts;
 /// Lazy handle to hidapi
 static API: LazyLock<HidApi> = LazyLock::new(|| HidApi::new().expect("failed to init hidapi"));
 
-#[derive(Debug, thiserror::Error)]
+#[derive(thiserror::Error)]
 pub enum Zoom65Error {
     #[error("failed to find device")]
     DeviceNotFound,
@@ -20,6 +20,12 @@ pub enum Zoom65Error {
     UpdateCommandFailed,
     #[error("hid device error: {_0}")]
     Hid(#[from] HidError),
+}
+
+impl std::fmt::Debug for Zoom65Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self}")
+    }
 }
 
 /// High level handle for managing a zoom65 v3 keyboard
@@ -76,8 +82,8 @@ impl Zoom65v3 {
         buf[6..6 + slice.len()].copy_from_slice(slice);
 
         // Write to device and read response
-        self.device.write(&buf).unwrap();
-        let len = self.device.read(&mut self.buf).unwrap();
+        self.device.write(&buf)?;
+        let len = self.device.read(&mut self.buf)?;
         let slice = &self.buf[..len];
         assert!(slice[0] == 88);
 

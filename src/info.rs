@@ -12,7 +12,7 @@ pub struct GpuTemp {
 
 impl GpuTemp {
     /// Construct a new gpu tempurature monitor, optionally selecting by device index
-    pub fn new(index: Option<u32>) -> Self {
+    pub fn new(index: u32) -> Self {
         static NVML: LazyLock<Option<Nvml>> = LazyLock::new(|| {
             let nvml = Nvml::init().ok();
             if nvml.is_none() {
@@ -22,7 +22,7 @@ impl GpuTemp {
         });
 
         let maybe_device = NVML.as_ref().and_then(|nvml| {
-            let device = nvml.device_by_index(index.unwrap_or_default()).ok();
+            let device = nvml.device_by_index(index).ok();
             if device.is_none() {
                 eprintln!("warning: device not found")
             }
@@ -53,12 +53,9 @@ pub struct CpuTemp {
 
 impl CpuTemp {
     // Create a new cpu temp monitor, optionally selecting the component by a label search string
-    pub fn new(search_label: Option<&str>) -> Self {
+    pub fn new(search_label: &str) -> Self {
         let comps: Vec<_> = Components::new_with_refreshed_list().into();
-        let maybe_cpu = comps.into_iter().find(|v| {
-            v.label()
-                .contains(search_label.unwrap_or("coretemp Package id"))
-        });
+        let maybe_cpu = comps.into_iter().find(|v| v.label().contains(search_label));
         if maybe_cpu.is_none() {
             eprintln!("warning: could not find coretemp package")
         }
