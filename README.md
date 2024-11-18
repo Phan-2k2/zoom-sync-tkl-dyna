@@ -17,6 +17,8 @@ Cross-platform utility to sync Zoom65 v3 screen modules.
 | CPU temperature     | Supported        | Supported                       |
 | GPU temperature     | Nvidia           | Supported ?                     |
 | Download rate       | WIP              | Supported                       |
+| Manual data         | Supported        | Not supported                   |
+| Single update mode  | Supported        | Not supported                   |
 | Future-proof        | Will always work | Overflow errors after year 2255 |
 
 ## Third Party Services

@@ -13,7 +13,8 @@ zoom-sync-raw = { path = "./raw", version = "0.1.0" }
 
 # runtime and scaffalding
 tokio = { version = "1.41", features = ["full"] }
-bpaf = { version = "0.9", features = ["derive"] }
+bpaf = { version = "0.9", features = ["derive", "dull-color"] }
+either = "1.13"
 
 # data fetching
 chrono.workspace = true
