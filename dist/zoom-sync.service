@@ -1,0 +1,11 @@
+[Unit]
+Description=Screen module sync for zoom65v3 keyboards
+
+[Service]
+ExecStart=zoom-sync -f
+Restart=on-failure
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
+
