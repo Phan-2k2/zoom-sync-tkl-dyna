@@ -231,10 +231,12 @@ async fn run(
                 gpu_temp = 99;
             }
 
+            let download = download.unwrap_or_default();
+
             keyboard
-                .set_system_info(cpu_temp, gpu_temp, download.unwrap_or_default())
+                .set_system_info(cpu_temp, gpu_temp, download)
                 .map_err(|e| format!("failed to set system info: {e}"))?;
-            println!("updated system info {{ cpu_temp: {cpu_temp}, gpu_temp: {gpu_temp}, download: 0.0 }}");
+            println!("updated system info {{ cpu_temp: {cpu_temp}, gpu_temp: {gpu_temp}, download: {download} }}");
         }
     }
 
