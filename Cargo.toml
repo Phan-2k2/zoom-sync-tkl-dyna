@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "Cross-platform utility for syncing zoom65v3 screen modules"
 edition = "2021"
 
+[workspace]
+members = ["raw"]
+
 [workspace.dependencies]
 chrono = "0.4.38" # local time
 

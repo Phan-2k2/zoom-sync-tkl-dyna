@@ -10,6 +10,7 @@ use crate::types::Icon;
 use crate::types::Zoom65Error;
 
 pub mod consts;
+pub mod float;
 pub mod types;
 
 /// Lazy handle to hidapi
