@@ -112,6 +112,9 @@ enum Mode {
         /// Continuously refresh the data at a given interval
         #[bpaf(short('r'), long("refresh"), fallback(30), display_fallback)]
         u64,
+        /// Retry interval for reconnecting to keyboard
+        #[bpaf(short('R'), long("retry"), fallback(5), display_fallback)]
+        u64,
     ),
 }
 
@@ -133,12 +136,6 @@ struct Cli {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let mut args = cli().run();
-
-    let mut keyboard = Zoom65v3::open()?;
-    let version = keyboard
-        .get_version()
-        .map_err(|e| format!("failed to get keyboard version: {e}"))?;
-    println!("connected to keyboard version {version}\n");
 
     let mut cpu = match &args.system_args {
         SystemArgs::Enabled {
@@ -165,11 +162,36 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
 
     match args.mode {
-        Mode::Update => run(&mut args, &mut keyboard, &mut cpu, &gpu).await,
-        Mode::Refresh(s) => loop {
+        Mode::Update => {
+            let mut keyboard = Zoom65v3::open()?;
             run(&mut args, &mut keyboard, &mut cpu, &gpu).await?;
-            tokio::time::sleep(Duration::from_secs(s)).await;
-            println!();
+            std::process::exit(0);
+        }
+        Mode::Refresh(s, r) => 'outer: loop {
+            let mut keyboard = match Zoom65v3::open() {
+                Ok(k) => k,
+                Err(e) => {
+                    eprintln!("error: {e}\nreconnecting in {r} seconds...");
+                    tokio::time::sleep(Duration::from_secs(r)).await;
+                    continue 'outer;
+                }
+            };
+
+            let version = keyboard
+                .get_version()
+                .map_err(|e| format!("failed to get keyboard version: {e}"))?;
+            println!("connected to keyboard version {version}");
+
+            loop {
+                println!();
+                match run(&mut args, &mut keyboard, &mut cpu, &gpu).await {
+                    Ok(_) => tokio::time::sleep(Duration::from_secs(s)).await,
+                    Err(e) => {
+                        eprintln!("error: {e}");
+                        continue 'outer;
+                    }
+                }
+            }
         },
     }
 }
@@ -180,7 +202,6 @@ async fn run(
     cpu: &mut Either<info::CpuTemp, u8>,
     gpu: &Either<info::GpuTemp, u8>,
 ) -> Result<(), Box<dyn Error>> {
-    // update time
     let time = chrono::Local::now();
     keyboard
         .set_time(time)

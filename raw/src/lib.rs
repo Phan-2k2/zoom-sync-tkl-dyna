@@ -1,6 +1,7 @@
 //! High level abstraction for interacting with zoom65v3 screen modules
 
 use std::sync::LazyLock;
+use std::sync::RwLock;
 
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
 use consts::commands;
@@ -14,7 +15,8 @@ pub mod float;
 pub mod types;
 
 /// Lazy handle to hidapi
-static API: LazyLock<HidApi> = LazyLock::new(|| HidApi::new().expect("failed to init hidapi"));
+static API: LazyLock<RwLock<HidApi>> =
+    LazyLock::new(|| RwLock::new(HidApi::new().expect("failed to init hidapi")));
 
 /// High level abstraction for managing a zoom65 v3 keyboard
 pub struct Zoom65v3 {
@@ -25,8 +27,10 @@ pub struct Zoom65v3 {
 impl Zoom65v3 {
     /// Find and open the device for modifications
     pub fn open() -> Result<Self, Zoom65Error> {
+        API.write().unwrap().refresh_devices()?;
+        let api = API.read().unwrap();
         let mut this = Self {
-            device: API
+            device: api
                 .device_list()
                 .find(|d| {
                     d.vendor_id() == consts::ZOOM65_VENDOR_ID
@@ -35,7 +39,7 @@ impl Zoom65v3 {
                         && d.usage() == consts::ZOOM65_USAGE
                 })
                 .ok_or(Zoom65Error::DeviceNotFound)?
-                .open_device(&API)?,
+                .open_device(&api)?,
             buf: [0u8; 64],
         };
 
