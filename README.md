@@ -105,10 +105,11 @@ Available options:
 - [x] Fetch Nvidia GPU temp
 - [ ] Fetch AMD GPU temp
 - [ ] Monitor download rate
+- [x] Poll and reconnect to keyboard
 - [x] CLI arguments
 - [ ] System tray menu
   - [ ] Poll and autodetect new keyboards
-  - [ ] Update intervals for each value
+- [ ] Update intervals for each value
 - [ ] Package releases
   - [ ] Crates.io
   - [ ] Nixpkgs
