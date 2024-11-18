@@ -53,23 +53,44 @@ nix run github:ozwaldorf/zoom-sync
 ## Usage
 
 ```
-Usage: zoom-sync [-r=SECS] [-f] [-g=ID] [-t=LABEL] [-c=<LAT,LONG>]
+Usage: zoom-sync (-u | [-r=ARG]) [-f] (--no-weather | [--coords LAT LON] | -w WMO CUR MIN MAX)
+                 (--no-system | ([--cpu=LABEL] | -c=TEMP) ([--gpu=ID] | -g=TEMP) [-d=ARG])
+
+Sync modes:
+    -u, --update         Update the keyboard a single time
+    -r, --refresh=ARG    Continuously refresh the data at a given interval
+                         [default: 30]
+
+Weather forecast options:
+        --no-weather     Disable updating weather info completely
+  --coords LAT LON
+        --coords         Optional coordinates to use for fetching weather data, skipping ipinfo
+                         geolocation api.
+    LAT                  Latitude
+
+  -w WMO CUR MIN MAX
+    -w, --weather        Manually provide weather data, skipping open-meteo weather api. All values
+                         are unitless.
+    WMO                  WMO Index
+    CUR                  Current temperature
+    MIN                  Minumum temperature
+    MAX                  Maximum temperature
+
+System info options:
+        --no-system      Disable updating system info completely
+        --cpu=LABEL      Sensor label to search for
+                         [default: coretemp Package]
+    -c, --cpu-temp=TEMP  Manually set CPU temperature
+        --gpu=ID         GPU device id to fetch temperature data for (nvidia only)
+                         [default: 0]
+    -g, --gpu-temp=TEMP  Manually set GPU temperature
+    -d, --download=ARG   Manually set download speed
 
 Available options:
-    -r, --refresh=SECS       Refresh data every given number of seconds
-                             [default: 30]
-    -f, --farenheit          Use farenheit for all temperatures. May cause
-                             clamping for anything greater than 99F
-                             [default: false]
-    -g, --gpu=ID             Use a specific gpu device id
-                             [default: 0]
-    -t, --temp=LABEL         Search for a specific cpu temp component
-                             [default: coretemp Package]
-    -c, --coords=<LAT,LONG>  Optional coordinates to use for open-meteo weather
-                             forcasting. If unset, falls back to ipinfo.com for
-                             location.
-    -h, --help               Prints help information
-    -V, --version            Prints version information
+    -f, --farenheit      Use farenheit for all fetched temperatures. May cause clamping for anything
+                         greater than 99F. No effect on any manually provided data.
+    -h, --help           Prints help information
+    -V, --version        Prints version information
 ```
 
 ## Feature Checklist
