@@ -5,6 +5,7 @@ use std::sync::RwLock;
 
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
 use consts::commands;
+use float::DumbFloat16;
 use hidapi::{HidApi, HidDevice};
 
 use crate::types::Icon;
@@ -139,25 +140,12 @@ impl Zoom65v3 {
         &mut self,
         cpu_temp: u8,
         gpu_temp: u8,
-        download_rate: f64,
+        download_rate: f32,
     ) -> Result<(), Zoom65Error> {
-        // This is my best guess at how they are encoding the download float into 2 bytes
-        //
-        // Sending the following sets the display to:
-        //   [0, 0] => 0.00
-        //   [0, 1] => 0.01
-        //   [1, 0] => 2.56
-        //   [1, 1] => 2.57
-        //
-        // With the below solution:
-        //   f(100) =>  99.84
-        //   f(200) => 199.68
-        let download_m = download_rate / 2.56;
-        let download_r = download_rate % 2.56;
-
+        let bytes = DumbFloat16::new(download_rate).to_bit_repr();
         self.update(
             commands::ZOOM65_SET_SYSINFO_ID,
-            &[cpu_temp, gpu_temp, download_m as u8, download_r as u8],
+            &[cpu_temp, gpu_temp, bytes[0], bytes[1]],
         )
     }
 

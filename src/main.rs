@@ -98,7 +98,7 @@ enum SystemArgs {
         gpu_mode: GpuMode,
         /// Manually set download speed
         #[bpaf(short, long)]
-        download: Option<f64>,
+        download: Option<f32>,
     },
 }
 
