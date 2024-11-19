@@ -108,7 +108,6 @@ Available options:
 - [x] Poll and reconnect to keyboard
 - [x] CLI arguments
 - [ ] System tray menu
-  - [ ] Poll and autodetect new keyboards
 - [ ] Update intervals for each value
 - [ ] Package releases
   - [ ] Crates.io
