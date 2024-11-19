@@ -7,6 +7,7 @@ use chrono::{DateTime, Datelike, TimeZone, Timelike};
 use consts::commands;
 use float::DumbFloat16;
 use hidapi::{HidApi, HidDevice};
+use types::ScreenPosition;
 
 use crate::types::Icon;
 use crate::types::Zoom65Error;
@@ -104,6 +105,42 @@ impl Zoom65v3 {
         self.update(commands::ZOOM65_SCREEN_SWITCH, &[])
     }
 
+    /// Reset the screen back to the meletrix logo
+    #[inline(always)]
+    pub fn reset_screen(&mut self) -> Result<(), Zoom65Error> {
+        self.update(commands::ZOOM65_RESET_SCREEN_ID, &[])
+    }
+
+    /// Set the screen to a specific position and offset
+    pub fn set_screen(&mut self, position: ScreenPosition) -> Result<(), Zoom65Error> {
+        let (y, x) = position.to_directions();
+
+        // Back to default
+        self.reset_screen()?;
+
+        // Move screen up or down
+        match y {
+            y if y < 0 => {
+                for _ in 0..y.abs() {
+                    self.screen_up()?;
+                }
+            }
+            y if y > 0 => {
+                for _ in 0..y.abs() {
+                    self.screen_down()?;
+                }
+            }
+            _ => {}
+        }
+
+        // Switch screen to offset
+        for _ in 0..x {
+            self.screen_switch()?;
+        }
+
+        Ok(())
+    }
+
     /// Update the keyboards current time
     pub fn set_time<Tz: TimeZone>(&mut self, time: DateTime<Tz>) -> Result<(), Zoom65Error> {
         self.update(
@@ -147,10 +184,5 @@ impl Zoom65v3 {
             commands::ZOOM65_SET_SYSINFO_ID,
             &[cpu_temp, gpu_temp, bytes[0], bytes[1]],
         )
-    }
-
-    /// Reset the screen back to the meletrix logo
-    pub fn reset_screen(&mut self) -> Result<(), Zoom65Error> {
-        self.update(commands::ZOOM65_RESET_SCREEN_ID, &[])
     }
 }

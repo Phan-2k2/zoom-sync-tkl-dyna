@@ -5,7 +5,10 @@ use chrono::Timelike;
 use either::Either;
 use info::{CpuTemp, GpuTemp};
 use std::{error::Error, time::Duration};
-use zoom_sync_raw::{types::Icon, Zoom65v3};
+use zoom_sync_raw::{
+    types::{Icon, ScreenPosition},
+    Zoom65v3,
+};
 
 mod info;
 mod weather;
@@ -102,6 +105,22 @@ enum SystemArgs {
     },
 }
 
+/// Screen options:
+#[derive(Clone, Debug, Bpaf)]
+enum ScreenArgs {
+    Screen(
+        /// Reset and move the screen to a specific position.
+        /// [cpu|gpu|download|time|weather|meletrix|zoom65|custom|nyancat|battery]
+        #[bpaf(short('s'), long("screen"))] ScreenPosition
+    ),
+    /// Move the screen up
+    Up,
+    /// Move the screen down
+    Down,
+    /// Switch the screen offset
+    Switch,
+}
+
 /// Sync modes:
 #[derive(Clone, Debug, Bpaf)]
 enum Mode {
@@ -127,6 +146,8 @@ struct Cli {
     /// No effect on any manually provided data.
     #[bpaf(short, long)]
     farenheit: bool,
+    #[bpaf(external, optional)]
+    screen_args: Option<ScreenArgs>,
     #[bpaf(external)]
     weather_args: WeatherArgs,
     #[bpaf(external)]
@@ -164,6 +185,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     match args.mode {
         Mode::Update => {
             let mut keyboard = Zoom65v3::open()?;
+            if let Some(ref args) = args.screen_args {
+                screen(args, &mut keyboard)?;
+            }
             run(&mut args, &mut keyboard, &mut cpu, &gpu).await?;
             std::process::exit(0);
         }
@@ -182,18 +206,34 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .map_err(|e| format!("failed to get keyboard version: {e}"))?;
             println!("connected to keyboard version {version}");
 
+            if let Some(ref args) = args.screen_args {
+                if let Err(e) = screen(args, &mut keyboard) {
+                    eprintln!("error: {e}");
+                    continue 'outer;
+                }
+            }
+            println!("set screen");
+
             loop {
                 println!();
-                match run(&mut args, &mut keyboard, &mut cpu, &gpu).await {
-                    Ok(_) => tokio::time::sleep(Duration::from_secs(s)).await,
-                    Err(e) => {
-                        eprintln!("error: {e}");
-                        continue 'outer;
-                    }
+                if let Err(e) = run(&mut args, &mut keyboard, &mut cpu, &gpu).await {
+                    eprintln!("error: {e}");
+                    continue 'outer;
                 }
+                tokio::time::sleep(Duration::from_secs(s)).await
             }
         },
     }
+}
+
+fn screen(args: &ScreenArgs, keyboard: &mut Zoom65v3) -> Result<(), Box<dyn Error>> {
+    match args {
+        ScreenArgs::Screen(pos) => keyboard.set_screen(*pos)?,
+        ScreenArgs::Up => keyboard.screen_up()?,
+        ScreenArgs::Down => keyboard.screen_down()?,
+        ScreenArgs::Switch => keyboard.screen_switch()?,
+    };
+    Ok(())
 }
 
 async fn run(

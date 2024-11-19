@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use hidapi::HidError;
 
 #[derive(thiserror::Error)]
@@ -72,5 +74,102 @@ impl Icon {
             // unknown
             _ => None
         }
+    }
+}
+
+/// Available screen position and offsets.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ScreenPosition {
+    System(SystemOffset), // up 2
+    Time(TimeOffset),     // up 1
+    Logo(LogoOffset),     // default
+    Battery,              // down 1
+}
+
+impl Default for ScreenPosition {
+    fn default() -> Self {
+        Self::Logo(Default::default())
+    }
+}
+
+impl ScreenPosition {
+    pub const OPTIONS: &'static str = "[ cpu|c, gpu|g, download|d, time|t, weather|w, meletrix|m, zoom65|z, custom, nyancat|n, battery|b ]";
+
+    /// Convert screen position into directions from the default screen as `[up/down, shift]`
+    pub fn to_directions(&self) -> (isize, usize) {
+        match self {
+            ScreenPosition::System(o) => (-2, *o as usize),
+            ScreenPosition::Time(o) => (-1, *o as usize),
+            ScreenPosition::Logo(o) => (0, *o as usize),
+            ScreenPosition::Battery => (1, 0),
+        }
+    }
+}
+
+impl FromStr for ScreenPosition {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "cpu" | "c" => Ok(Self::System(SystemOffset::CpuTemp)),
+            "gpu" | "g" => Ok(Self::System(SystemOffset::GpuTemp)),
+            "download" | "d" => Ok(Self::System(SystemOffset::Download)),
+            "time" | "t" => Ok(Self::Time(TimeOffset::Time)),
+            "weather" | "w" => Ok(Self::Time(TimeOffset::Weather)),
+            "meletrix" | "m" => Ok(Self::Logo(LogoOffset::Meletrix)),
+            "zoom65" | "z" => Ok(Self::Logo(LogoOffset::Zoom65)),
+            "custom" => Ok(Self::Logo(LogoOffset::Custom)),
+            "nyancat" | "n" => Ok(Self::Logo(LogoOffset::NyanCat)),
+            "battery" | "b" => Ok(Self::Battery),
+            _ => Err(format!(
+                "invalid screen position, must be one of: {}",
+                Self::OPTIONS
+            )),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub enum SystemOffset {
+    #[default]
+    CpuTemp = 0,
+    GpuTemp = 1,
+    Download = 2,
+}
+
+impl SystemOffset {
+    /// Convert into a full screen position type
+    pub fn pos(&self) -> ScreenPosition {
+        ScreenPosition::System(*self)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(usize)]
+pub enum TimeOffset {
+    #[default]
+    Time = 0,
+    Weather = 1,
+}
+
+impl TimeOffset {
+    /// Convert into a full screen position type
+    pub fn pos(&self) -> ScreenPosition {
+        ScreenPosition::Time(*self)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub enum LogoOffset {
+    #[default]
+    Meletrix = 0,
+    Zoom65 = 1,
+    Custom = 2,
+    NyanCat = 3,
+}
+
+impl LogoOffset {
+    /// Convert into a full screen position type
+    pub fn pos(&self) -> ScreenPosition {
+        ScreenPosition::Logo(*self)
     }
 }
