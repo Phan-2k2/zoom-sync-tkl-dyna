@@ -6,7 +6,7 @@ use bpaf::{Bpaf, Parser};
 use either::Either;
 use info::apply_system;
 use weather::apply_weather;
-use zoom_sync_raw::Zoom65v3;
+use zoom65v3::Zoom65v3;
 
 use crate::info::{cpu_mode, gpu_mode, system_args, CpuMode, GpuMode, SystemArgs};
 use crate::screen::{apply_screen, screen_args, ScreenArgs};

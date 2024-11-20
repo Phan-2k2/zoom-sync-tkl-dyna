@@ -6,7 +6,7 @@ use bpaf::Bpaf;
 use chrono::Timelike;
 use ipinfo::IpInfo;
 use open_meteo_api::query::OpenMeteo;
-use zoom_sync_raw::{types::Icon, Zoom65v3};
+use zoom65v3::{types::Icon, Zoom65v3};
 
 #[derive(Clone, Debug, Bpaf)]
 #[bpaf(adjacent)]

@@ -6,7 +6,7 @@ use bpaf::Bpaf;
 use either::Either;
 use nvml_wrapper::{enum_wrappers::device::TemperatureSensor, Device, Nvml};
 use sysinfo::{Component, Components};
-use zoom_sync_raw::Zoom65v3;
+use zoom65v3::Zoom65v3;
 
 #[derive(Clone, Debug, bpaf::Bpaf)]
 pub enum CpuMode {

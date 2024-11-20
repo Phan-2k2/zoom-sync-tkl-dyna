@@ -1,4 +1,4 @@
-//! High level abstraction for interacting with zoom65v3 screen modules
+//! High level hidapi abstraction for interacting with zoom65v3 screen modules
 
 use std::sync::LazyLock;
 use std::sync::RwLock;

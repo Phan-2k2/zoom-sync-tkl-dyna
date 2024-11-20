@@ -1,5 +1,5 @@
 [package]
-name = "zoom-sync-raw"
+name = "zoom65v3"
 version = "0.1.0"
 description = "Reverse engineered raw bindings to the zoom65v3 screen module"
 edition = "2021"

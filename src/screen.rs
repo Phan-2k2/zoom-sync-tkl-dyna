@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use bpaf::Bpaf;
-use zoom_sync_raw::{types::ScreenPosition, Zoom65v3};
+use zoom65v3::{types::ScreenPosition, Zoom65v3};
 
 /// Screen options:
 #[derive(Clone, Debug, Bpaf)]

@@ -2259,11 +2259,11 @@ dependencies = [
  "open-meteo-api",
  "sysinfo",
  "tokio",
- "zoom-sync-raw",
+ "zoom65v3",
 ]
 
 [[package]]
-name = "zoom-sync-raw"
+name = "zoom65v3"
 version = "0.1.0"
 dependencies = [
  "chrono",
