@@ -1,9 +1,75 @@
 //! Utilities for getting system info
 
-use std::sync::LazyLock;
+use std::{error::Error, sync::LazyLock};
 
+use bpaf::Bpaf;
+use either::Either;
 use nvml_wrapper::{enum_wrappers::device::TemperatureSensor, Device, Nvml};
 use sysinfo::{Component, Components};
+use zoom_sync_raw::Zoom65v3;
+
+#[derive(Clone, Debug, bpaf::Bpaf)]
+pub enum CpuMode {
+    Label(
+        /// Sensor label to search for
+        #[bpaf(long("cpu"), argument("LABEL"), fallback("coretemp Package".into()), display_fallback)]
+        String,
+    ),
+    Manual(
+        /// Manually set CPU temperature
+        #[bpaf(short('c'), long("cpu-temp"), argument("TEMP"))]
+        u8,
+    ),
+}
+
+impl CpuMode {
+    pub fn either(&self) -> Either<CpuTemp, u8> {
+        match self {
+            CpuMode::Label(label) => Either::Left(CpuTemp::new(label)),
+            CpuMode::Manual(v) => Either::Right(*v),
+        }
+    }
+}
+
+#[derive(Clone, Debug, bpaf::Bpaf)]
+pub enum GpuMode {
+    Id(
+        /// GPU device id to fetch temperature data for (nvidia only)
+        #[bpaf(long("gpu"), argument::<u32>("ID"), fallback(0), display_fallback)]
+        u32,
+    ),
+    Manual(
+        /// Manually set GPU temperature
+        #[bpaf(short('g'), long("gpu-temp"), argument("TEMP"))]
+        u8,
+    ),
+}
+
+impl GpuMode {
+    pub fn either(&self) -> Either<GpuTemp, u8> {
+        match self {
+            GpuMode::Id(i) => Either::Left(GpuTemp::new(*i)),
+            GpuMode::Manual(v) => Either::Right(*v),
+        }
+    }
+}
+
+/// System info options:
+#[derive(Clone, Debug, Bpaf)]
+pub enum SystemArgs {
+    /// Disable updating system info completely
+    #[bpaf(long("no-system"))]
+    Disabled,
+    Enabled {
+        #[bpaf(external)]
+        cpu_mode: CpuMode,
+        #[bpaf(external)]
+        gpu_mode: GpuMode,
+        /// Manually set download speed
+        #[bpaf(short, long)]
+        download: Option<f32>,
+    },
+}
 
 /// Helper struct to track gpu temperature
 pub struct GpuTemp {
@@ -73,4 +139,41 @@ impl CpuTemp {
             temp as u8
         })
     }
+}
+
+pub fn apply_system(
+    keyboard: &mut Zoom65v3,
+    farenheit: bool,
+    cpu: &mut Either<CpuTemp, u8>,
+    gpu: &Either<GpuTemp, u8>,
+    download: Option<f32>,
+) -> Result<(), Box<dyn Error>> {
+    let mut cpu_temp = cpu
+        .as_mut()
+        .map_left(|c| c.get_temp(farenheit).unwrap_or_default())
+        .map_right(|v| *v)
+        .into_inner();
+    if cpu_temp >= 100 {
+        eprintln!("warning: actual cpu temperature at {cpu_temp}, clamping to 99");
+        cpu_temp = 99;
+    }
+
+    let mut gpu_temp = gpu
+        .as_ref()
+        .map_left(|g| g.get_temp(farenheit).unwrap_or_default())
+        .map_right(|v| *v)
+        .into_inner();
+    if gpu_temp >= 100 {
+        eprintln!("warning: actual gpu temerature at {gpu_temp}. clamping to 99");
+        gpu_temp = 99;
+    }
+
+    let download = download.unwrap_or_default();
+
+    keyboard
+        .set_system_info(cpu_temp, gpu_temp, download)
+        .map_err(|e| format!("failed to set system info: {e}"))?;
+    println!("updated system info {{ cpu_temp: {cpu_temp}, gpu_temp: {gpu_temp}, download: {download} }}");
+
+    Ok(())
 }

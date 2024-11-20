@@ -93,7 +93,7 @@ impl Default for ScreenPosition {
 }
 
 impl ScreenPosition {
-    pub const OPTIONS: &'static str = "[ cpu|c, gpu|g, download|d, time|t, weather|w, meletrix|m, zoom65|z, custom, nyancat|n, battery|b ]";
+    pub const OPTIONS: &'static str = "[ cpu, gpu, download|d, time|t, weather|w, meletrix|m, zoom65|z, image|i, gif|g, battery|b ]";
 
     /// Convert screen position into directions from the default screen as `[up/down, shift]`
     pub fn to_directions(&self) -> (isize, usize) {
@@ -110,15 +110,15 @@ impl FromStr for ScreenPosition {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "cpu" | "c" => Ok(Self::System(SystemOffset::CpuTemp)),
-            "gpu" | "g" => Ok(Self::System(SystemOffset::GpuTemp)),
+            "cpu" => Ok(Self::System(SystemOffset::CpuTemp)),
+            "gpu" => Ok(Self::System(SystemOffset::GpuTemp)),
             "download" | "d" => Ok(Self::System(SystemOffset::Download)),
             "time" | "t" => Ok(Self::Time(TimeOffset::Time)),
             "weather" | "w" => Ok(Self::Time(TimeOffset::Weather)),
             "meletrix" | "m" => Ok(Self::Logo(LogoOffset::Meletrix)),
             "zoom65" | "z" => Ok(Self::Logo(LogoOffset::Zoom65)),
-            "custom" => Ok(Self::Logo(LogoOffset::Custom)),
-            "nyancat" | "n" => Ok(Self::Logo(LogoOffset::NyanCat)),
+            "image" | "i" => Ok(Self::Logo(LogoOffset::Image)),
+            "gif" | "g" => Ok(Self::Logo(LogoOffset::Gif)),
             "battery" | "b" => Ok(Self::Battery),
             _ => Err(format!(
                 "invalid screen position, must be one of: {}",
@@ -163,8 +163,8 @@ pub enum LogoOffset {
     #[default]
     Meletrix = 0,
     Zoom65 = 1,
-    Custom = 2,
-    NyanCat = 3,
+    Image = 2,
+    Gif = 3,
 }
 
 impl LogoOffset {

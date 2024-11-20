@@ -53,44 +53,76 @@ nix run github:ozwaldorf/zoom-sync
 ## Usage
 
 ```
-Usage: zoom-sync (-u | [-r=ARG]) [-f] (--no-weather | [--coords LAT LON] | -w WMO CUR MIN MAX)
-                 (--no-system | ([--cpu=LABEL] | -c=TEMP) ([--gpu=ID] | -g=TEMP) [-d=ARG])
+Cross-platform utility for syncing zoom65v3 screen modules
 
-Sync modes:
-    -u, --update         Update the keyboard a single time
-    -r, --refresh=ARG    Continuously refresh the data at a given interval
-                         [default: 30]
+Usage: zoom-sync
+        ([-r=ARG] [-R=ARG] [-f] [-s=POSITION | --up | --down | --switch]
+        (--no-weather | [--coords LAT LON] | -w WMO CUR MIN MAX)
+        (--no-system | ([--cpu=LABEL] | -c=TEMP) ([--gpu=ID] | -g=TEMP) [-d=ARG]))
+        | COMMAND ...
+
+Screen options:
+    -s, --screen=POSITION  Reset and move the screen to a specific position.
+                           [cpu|gpu|download|time|weather|meletrix|zoom65|image|gif|battery]
+        --up               Move the screen up
+        --down             Move the screen down
+        --switch           Switch the screen offset
 
 Weather forecast options:
-        --no-weather     Disable updating weather info completely
+        --no-weather       Disable updating weather info completely
   --coords LAT LON
-        --coords         Optional coordinates to use for fetching weather data, skipping ipinfo
-                         geolocation api.
-    LAT                  Latitude
+        --coords           Optional coordinates to use for fetching weather data, skipping ipinfo
+                           geolocation api.
+    LAT                    Latitude
+    LON                    Longitude
 
   -w WMO CUR MIN MAX
-    -w, --weather        Manually provide weather data, skipping open-meteo weather api. All values
-                         are unitless.
-    WMO                  WMO Index
-    CUR                  Current temperature
-    MIN                  Minumum temperature
-    MAX                  Maximum temperature
+    -w, --weather          Manually provide weather data, skipping open-meteo weather api. All
+                           values are unitless.
+    WMO                    WMO Index
+    CUR                    Current temperature
+    MIN                    Minumum temperature
+    MAX                    Maximum temperature
 
 System info options:
-        --no-system      Disable updating system info completely
-        --cpu=LABEL      Sensor label to search for
-                         [default: coretemp Package]
-    -c, --cpu-temp=TEMP  Manually set CPU temperature
-        --gpu=ID         GPU device id to fetch temperature data for (nvidia only)
-                         [default: 0]
-    -g, --gpu-temp=TEMP  Manually set GPU temperature
-    -d, --download=ARG   Manually set download speed
+        --no-system        Disable updating system info completely
+        --cpu=LABEL        Sensor label to search for
+                           [default: coretemp Package]
+    -c, --cpu-temp=TEMP    Manually set CPU temperature
+        --gpu=ID           GPU device id to fetch temperature data for (nvidia only)
+                           [default: 0]
+    -g, --gpu-temp=TEMP    Manually set GPU temperature
+    -d, --download=ARG     Manually set download speed
 
 Available options:
-    -f, --farenheit      Use farenheit for all fetched temperatures. May cause clamping for anything
-                         greater than 99F. No effect on any manually provided data.
-    -h, --help           Prints help information
-    -V, --version        Prints version information
+    -r, --refresh=ARG      Continuously refresh the data at a given interval
+                           [default: 30]
+    -R, --retry=ARG        Retry interval for reconnecting to keyboard
+                           [default: 5]
+    -f, --farenheit        Use farenheit for all fetched temperatures. May cause clamping for
+                           anything greater than 99F.No effect on any manually provided data.
+    -h, --help             Prints help information
+    -V, --version          Prints version information
+
+Available commands:
+    set                    Set specific options on the keyboard
+```
+
+### Set subcommand
+
+```
+Set specific options on the keyboard
+
+Usage: zoom-sync set COMMAND ...
+
+Available options:
+    -h, --help  Prints help information
+
+Available commands:
+    time        Sync time to system clock
+    weather     Set weather data
+    system      Set system info
+    screen      Change current screen
 ```
 
 ## Feature Checklist

@@ -2,9 +2,58 @@
 
 use std::error::Error;
 
+use bpaf::Bpaf;
+use chrono::Timelike;
 use ipinfo::IpInfo;
 use open_meteo_api::query::OpenMeteo;
-use zoom_sync_raw::types::Icon;
+use zoom_sync_raw::{types::Icon, Zoom65v3};
+
+#[derive(Clone, Debug, Bpaf)]
+#[bpaf(adjacent)]
+pub struct Coords {
+    /// Optional coordinates to use for fetching weather data, skipping ipinfo geolocation api.
+    #[bpaf(long)]
+    #[allow(dead_code)]
+    pub coords: (),
+    /// Latitude
+    #[bpaf(positional("LAT"))]
+    pub lat: f32,
+    /// Longitude
+    #[bpaf(positional("LON"))]
+    pub long: f32,
+}
+
+/// Weather forecast options:
+#[derive(Clone, Debug, Bpaf)]
+pub enum WeatherArgs {
+    /// Disable updating weather info completely
+    #[bpaf(long("no-weather"))]
+    Disabled,
+    // default
+    Auto {
+        #[bpaf(external, optional)]
+        coords: Option<Coords>,
+    },
+    #[bpaf(adjacent)]
+    Manual {
+        /// Manually provide weather data, skipping open-meteo weather api. All values are unitless.
+        #[bpaf(short, long)]
+        #[allow(dead_code)]
+        weather: (),
+        /// WMO Index
+        #[bpaf(positional("WMO"))]
+        wmo: u8,
+        /// Current temperature
+        #[bpaf(positional("CUR"))]
+        current: u8,
+        /// Minumum temperature
+        #[bpaf(positional("MIN"))]
+        min: u8,
+        /// Maximum temperature
+        #[bpaf(positional("MAX"))]
+        max: u8,
+    },
+}
 
 pub async fn get_coords() -> Result<(f32, f32), Box<dyn Error>> {
     println!("fetching geolocation from ipinfo ...");
@@ -48,4 +97,62 @@ pub async fn get_weather(
     }
 
     Ok((icon, min, max, temp))
+}
+
+pub async fn apply_weather(
+    keyboard: &mut Zoom65v3,
+    args: &mut WeatherArgs,
+    farenheit: bool,
+) -> Result<(), Box<dyn Error>> {
+    match args {
+        WeatherArgs::Disabled => println!("skipping weather"),
+        WeatherArgs::Auto { coords } => {
+            // attempt to backfill coordinates if not provided
+            if coords.is_none() {
+                match get_coords().await {
+                    Ok((lat, long)) => {
+                        *coords = Some(Coords {
+                            coords: (),
+                            lat,
+                            long,
+                        })
+                    }
+                    Err(e) => eprintln!("warning: failed to fetch geolocation from ipinfo: {e}"),
+                }
+            }
+
+            // try to update weather if we have some coordinates
+            if let Some(Coords { lat, long, .. }) = *coords {
+                match get_weather(lat, long, farenheit).await {
+                    Ok((icon, min, max, temp)) => {
+                        keyboard
+                            .set_weather(icon.clone(), temp as u8, max as u8, min as u8)
+                            .map_err(|e| format!("failed to set weather: {e}"))?;
+                        println!(
+                            "updated weather {{ icon: {icon:?}, current: {temp}, min: {min}, max: {max} }}"
+                        );
+                    }
+                    Err(e) => eprintln!("failed to fetch weather, skipping: {e}"),
+                }
+            }
+        }
+        WeatherArgs::Manual {
+            wmo,
+            current,
+            min,
+            max,
+            ..
+        } => {
+            let hour = chrono::Local::now().hour();
+            let is_day = (6..=18).contains(&hour);
+            keyboard.set_weather(
+                Icon::from_wmo(*wmo, is_day).ok_or("unknown WMO code")?,
+                *current,
+                *min,
+                *max,
+            )?;
+        }
+    }
+
+    Ok(())
 }

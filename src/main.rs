@@ -1,100 +1,68 @@
 //! Main cli binary
 
-use bpaf::Bpaf;
-use chrono::Timelike;
-use either::Either;
-use info::{CpuTemp, GpuTemp};
 use std::{error::Error, time::Duration};
-use zoom_sync_raw::{
-    types::{Icon, ScreenPosition},
-    Zoom65v3,
-};
+
+use bpaf::{Bpaf, Parser};
+use either::Either;
+use info::apply_system;
+use weather::apply_weather;
+use zoom_sync_raw::Zoom65v3;
+
+use crate::info::{cpu_mode, gpu_mode, system_args, CpuMode, GpuMode, SystemArgs};
+use crate::screen::{apply_screen, screen_args, ScreenArgs};
+use crate::weather::{weather_args, WeatherArgs};
 
 mod info;
+mod screen;
 mod weather;
 
-#[derive(Clone, Debug, Bpaf)]
-#[bpaf(adjacent)]
-struct Coords {
-    /// Optional coordinates to use for fetching weather data, skipping ipinfo geolocation api.
-    #[bpaf(long)]
-    #[allow(dead_code)]
-    coords: (),
-    /// Latitude
-    #[bpaf(positional("LAT"))]
-    lat: f32,
-    // Longitude
-    #[bpaf(positional("LON"))]
-    long: f32,
+fn farenheit() -> impl Parser<bool> {
+    bpaf::short('f')
+        .long("farenheit")
+        .help(
+            "Use farenheit for all fetched temperatures. \
+May cause clamping for anything greater than 99F.\
+No effect on any manually provided data.",
+        )
+        .switch()
 }
 
-/// Weather forecast options:
+#[derive(Debug, Clone, Bpaf)]
+struct RefreshArgs {
+    /// Continuously refresh the data at a given interval
+    #[bpaf(short, long, fallback(30), display_fallback)]
+    refresh: u64,
+    /// Retry interval for reconnecting to keyboard
+    #[bpaf(short('R'), long, fallback(5), display_fallback)]
+    retry: u64,
+    #[bpaf(external)]
+    farenheit: bool,
+    #[bpaf(external, optional)]
+    screen_args: Option<ScreenArgs>,
+    #[bpaf(external(weather_args))]
+    weather_args: WeatherArgs,
+    #[bpaf(external(system_args))]
+    system_args: SystemArgs,
+}
+
 #[derive(Clone, Debug, Bpaf)]
-enum WeatherArgs {
-    /// Disable updating weather info completely
-    #[bpaf(long("no-weather"))]
-    Disabled,
-    // default
-    Auto {
-        #[bpaf(external, optional)]
-        coords: Option<Coords>,
+enum SetCommand {
+    /// Sync time to system clock
+    #[bpaf(command)]
+    Time,
+    /// Set weather data
+    #[bpaf(command)]
+    Weather {
+        #[bpaf(external)]
+        farenheit: bool,
+        #[bpaf(external)]
+        weather_args: WeatherArgs,
     },
-    #[bpaf(adjacent)]
-    Manual {
-        /// Manually provide weather data, skipping open-meteo weather api. All values are unitless.
-        #[bpaf(short, long)]
-        #[allow(dead_code)]
-        weather: (),
-        /// WMO Index
-        #[bpaf(positional("WMO"))]
-        wmo: u8,
-        /// Current temperature
-        #[bpaf(positional("CUR"))]
-        current: u8,
-        /// Minumum temperature
-        #[bpaf(positional("MIN"))]
-        min: u8,
-        /// Maximum temperature
-        #[bpaf(positional("MAX"))]
-        max: u8,
-    },
-}
-
-#[derive(Clone, Debug, bpaf::Bpaf)]
-enum CpuMode {
-    Label(
-        /// Sensor label to search for
-        #[bpaf(long("cpu"), argument("LABEL"), fallback("coretemp Package".into()), display_fallback)]
-        String,
-    ),
-    Manual(
-        /// Manually set CPU temperature
-        #[bpaf(short('c'), long("cpu-temp"), argument("TEMP"))]
-        u8,
-    ),
-}
-
-#[derive(Clone, Debug, bpaf::Bpaf)]
-enum GpuMode {
-    Id(
-        /// GPU device id to fetch temperature data for (nvidia only)
-        #[bpaf(long("gpu"), argument::<u32>("ID"), fallback(0), display_fallback)]
-        u32,
-    ),
-    Manual(
-        /// Manually set GPU temperature
-        #[bpaf(short('g'), long("gpu-temp"), argument("TEMP"))]
-        u8,
-    ),
-}
-
-/// System info options:
-#[derive(Clone, Debug, Bpaf)]
-enum SystemArgs {
-    /// Disable updating system info completely
-    #[bpaf(long("no-system"))]
-    Disabled,
-    Enabled {
+    /// Set system info
+    #[bpaf(command)]
+    System {
+        #[bpaf(external)]
+        farenheit: bool,
         #[bpaf(external)]
         cpu_mode: CpuMode,
         #[bpaf(external)]
@@ -103,232 +71,126 @@ enum SystemArgs {
         #[bpaf(short, long)]
         download: Option<f32>,
     },
-}
-
-/// Screen options:
-#[derive(Clone, Debug, Bpaf)]
-enum ScreenArgs {
-    Screen(
-        /// Reset and move the screen to a specific position.
-        /// [cpu|gpu|download|time|weather|meletrix|zoom65|custom|nyancat|battery]
-        #[bpaf(short('s'), long("screen"))] ScreenPosition
-    ),
-    /// Move the screen up
-    Up,
-    /// Move the screen down
-    Down,
-    /// Switch the screen offset
-    Switch,
-}
-
-/// Sync modes:
-#[derive(Clone, Debug, Bpaf)]
-enum Mode {
-    /// Update the keyboard a single time
-    #[bpaf(short, long)]
-    Update,
-    Refresh(
-        /// Continuously refresh the data at a given interval
-        #[bpaf(short('r'), long("refresh"), fallback(30), display_fallback)]
-        u64,
-        /// Retry interval for reconnecting to keyboard
-        #[bpaf(short('R'), long("retry"), fallback(5), display_fallback)]
-        u64,
-    ),
+    /// Change current screen
+    #[bpaf(command, fallback_to_usage)]
+    Screen(#[bpaf(external(screen_args))] ScreenArgs),
 }
 
 #[derive(Clone, Debug, Bpaf)]
 #[bpaf(options, version, descr(env!("CARGO_PKG_DESCRIPTION")))]
-struct Cli {
-    #[bpaf(external)]
-    mode: Mode,
-    /// Use farenheit for all fetched temperatures. May cause clamping for anything greater than 99F.
-    /// No effect on any manually provided data.
-    #[bpaf(short, long)]
-    farenheit: bool,
-    #[bpaf(external, optional)]
-    screen_args: Option<ScreenArgs>,
-    #[bpaf(external)]
-    weather_args: WeatherArgs,
-    #[bpaf(external)]
-    system_args: SystemArgs,
+enum Cli {
+    /// Update the keyboard periodically in a loop, reconnecting on errors.
+    Run(#[bpaf(external(refresh_args))] RefreshArgs),
+    /// Set specific options on the keyboard
+    #[bpaf(command, fallback_to_usage)]
+    Set {
+        #[bpaf(external)]
+        set_command: SetCommand,
+    },
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
-    let mut args = cli().run();
-
+async fn refresh(mut args: RefreshArgs) -> Result<(), Box<dyn Error>> {
     let mut cpu = match &args.system_args {
-        SystemArgs::Enabled {
-            cpu_mode: CpuMode::Label(label),
-            ..
-        } => Either::Left(CpuTemp::new(label)),
-        SystemArgs::Enabled {
-            cpu_mode: CpuMode::Manual(v),
-            ..
-        } => Either::Right(*v),
-        SystemArgs::Disabled => Either::Right(0),
+        SystemArgs::Disabled => None,
+        SystemArgs::Enabled { cpu_mode, .. } => Some(cpu_mode.either()),
     };
-
     let gpu = match &args.system_args {
-        SystemArgs::Enabled {
-            gpu_mode: GpuMode::Id(id),
-            ..
-        } => Either::Left(GpuTemp::new(*id)),
-        SystemArgs::Enabled {
-            gpu_mode: GpuMode::Manual(v),
-            ..
-        } => Either::Right(*v),
-        SystemArgs::Disabled => Either::Right(0),
+        SystemArgs::Disabled => None,
+        SystemArgs::Enabled { gpu_mode, .. } => Some(gpu_mode.either()),
     };
 
-    match args.mode {
-        Mode::Update => {
-            let mut keyboard = Zoom65v3::open()?;
-            if let Some(ref args) = args.screen_args {
-                screen(args, &mut keyboard)?;
+    'outer: loop {
+        let mut keyboard = match Zoom65v3::open() {
+            Ok(k) => k,
+            Err(e) => {
+                eprintln!("error: {e}\nreconnecting in {} seconds...", args.retry);
+                tokio::time::sleep(Duration::from_secs(args.retry)).await;
+                continue 'outer;
             }
-            run(&mut args, &mut keyboard, &mut cpu, &gpu).await?;
-            std::process::exit(0);
-        }
-        Mode::Refresh(s, r) => 'outer: loop {
-            let mut keyboard = match Zoom65v3::open() {
-                Ok(k) => k,
-                Err(e) => {
-                    eprintln!("error: {e}\nreconnecting in {r} seconds...");
-                    tokio::time::sleep(Duration::from_secs(r)).await;
-                    continue 'outer;
-                }
-            };
+        };
 
-            let version = keyboard
-                .get_version()
-                .map_err(|e| format!("failed to get keyboard version: {e}"))?;
-            println!("connected to keyboard version {version}");
+        let version = keyboard
+            .get_version()
+            .map_err(|e| format!("failed to get keyboard version: {e}"))?;
+        println!("connected to keyboard version {version}");
 
-            if let Some(ref args) = args.screen_args {
-                if let Err(e) = screen(args, &mut keyboard) {
-                    eprintln!("error: {e}");
-                    continue 'outer;
-                }
+        if let Some(ref args) = args.screen_args {
+            if let Err(e) = apply_screen(args, &mut keyboard) {
+                eprintln!("error: {e}");
+                continue 'outer;
             }
             println!("set screen");
+        }
 
-            loop {
-                println!();
-                if let Err(e) = run(&mut args, &mut keyboard, &mut cpu, &gpu).await {
-                    eprintln!("error: {e}");
-                    continue 'outer;
-                }
-                tokio::time::sleep(Duration::from_secs(s)).await
+        loop {
+            println!();
+            if let Err(e) = run(&mut args, &mut keyboard, &mut cpu, &gpu).await {
+                eprintln!("error: {e}");
+                continue 'outer;
             }
-        },
+            tokio::time::sleep(Duration::from_secs(args.refresh)).await
+        }
     }
 }
 
-fn screen(args: &ScreenArgs, keyboard: &mut Zoom65v3) -> Result<(), Box<dyn Error>> {
-    match args {
-        ScreenArgs::Screen(pos) => keyboard.set_screen(*pos)?,
-        ScreenArgs::Up => keyboard.screen_up()?,
-        ScreenArgs::Down => keyboard.screen_down()?,
-        ScreenArgs::Switch => keyboard.screen_switch()?,
-    };
+async fn run(
+    args: &mut RefreshArgs,
+    keyboard: &mut Zoom65v3,
+    cpu: &mut Option<Either<info::CpuTemp, u8>>,
+    gpu: &Option<Either<info::GpuTemp, u8>>,
+) -> Result<(), Box<dyn Error>> {
+    apply_time(keyboard)?;
+    if let SystemArgs::Enabled { download, .. } = args.system_args {
+        apply_system(
+            keyboard,
+            args.farenheit,
+            cpu.as_mut().unwrap(),
+            gpu.as_ref().unwrap(),
+            download,
+        )?;
+    }
+    apply_weather(keyboard, &mut args.weather_args, args.farenheit).await?;
+
     Ok(())
 }
 
-async fn run(
-    args: &mut Cli,
-    keyboard: &mut Zoom65v3,
-    cpu: &mut Either<info::CpuTemp, u8>,
-    gpu: &Either<info::GpuTemp, u8>,
-) -> Result<(), Box<dyn Error>> {
+pub fn apply_time(keyboard: &mut Zoom65v3) -> Result<(), Box<dyn Error>> {
     let time = chrono::Local::now();
     keyboard
         .set_time(time)
         .map_err(|e| format!("failed to set time: {e}"))?;
     println!("updated time to {time}");
-
-    match args.system_args {
-        SystemArgs::Disabled => println!("skipping system info"),
-        SystemArgs::Enabled { download, .. } => {
-            let mut cpu_temp = cpu
-                .as_mut()
-                .map_left(|c| c.get_temp(args.farenheit).unwrap_or_default())
-                .map_right(|v| *v)
-                .into_inner();
-            if cpu_temp >= 100 {
-                eprintln!("warning: actual cpu temperature at {cpu_temp}, clamping to 99");
-                cpu_temp = 99;
-            }
-
-            let mut gpu_temp = gpu
-                .as_ref()
-                .map_left(|g| g.get_temp(args.farenheit).unwrap_or_default())
-                .map_right(|v| *v)
-                .into_inner();
-            if gpu_temp >= 100 {
-                eprintln!("warning: actual gpu temerature at {gpu_temp}. clamping to 99");
-                gpu_temp = 99;
-            }
-
-            let download = download.unwrap_or_default();
-
-            keyboard
-                .set_system_info(cpu_temp, gpu_temp, download)
-                .map_err(|e| format!("failed to set system info: {e}"))?;
-            println!("updated system info {{ cpu_temp: {cpu_temp}, gpu_temp: {gpu_temp}, download: {download} }}");
-        }
-    }
-
-    match &mut args.weather_args {
-        WeatherArgs::Disabled => println!("skipping weather"),
-        WeatherArgs::Auto { coords } => {
-            // attempt to backfill coordinates if not provided
-            if coords.is_none() {
-                match weather::get_coords().await {
-                    Ok((lat, long)) => {
-                        *coords = Some(Coords {
-                            coords: (),
-                            lat,
-                            long,
-                        })
-                    }
-                    Err(e) => eprintln!("warning: failed to fetch geolocation from ipinfo: {e}"),
-                }
-            }
-
-            // try to update weather if we have some coordinates
-            if let Some(Coords { lat, long, .. }) = *coords {
-                match weather::get_weather(lat, long, args.farenheit).await {
-                    Ok((icon, min, max, temp)) => {
-                        keyboard
-                            .set_weather(icon.clone(), temp as u8, max as u8, min as u8)
-                            .map_err(|e| format!("failed to set weather: {e}"))?;
-                        println!(
-                            "updated weather {{ icon: {icon:?}, current: {temp}, min: {min}, max: {max} }}"
-                        );
-                    }
-                    Err(e) => eprintln!("failed to fetch weather, skipping: {e}"),
-                }
-            }
-        }
-        WeatherArgs::Manual {
-            wmo,
-            current,
-            min,
-            max,
-            ..
-        } => {
-            let hour = chrono::Local::now().hour();
-            let is_day = (6..=18).contains(&hour);
-            keyboard.set_weather(
-                Icon::from_wmo(*wmo, is_day).ok_or("unknown WMO code")?,
-                *current,
-                *min,
-                *max,
-            )?;
-        }
-    }
-
     Ok(())
 }
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    let args = cli().run();
+    match args {
+        Cli::Run(args) => refresh(args).await,
+        Cli::Set { set_command } => {
+            let mut keyboard = Zoom65v3::open()?;
+            match set_command {
+                SetCommand::Time => apply_time(&mut keyboard),
+                SetCommand::Weather { farenheit, mut weather_args } => {
+                    apply_weather(&mut keyboard, &mut weather_args, farenheit).await
+                }
+                SetCommand::System {
+                    farenheit,
+                    cpu_mode,
+                    gpu_mode,
+                    download,
+                } => apply_system(
+                    &mut keyboard,
+                    farenheit,
+                    &mut cpu_mode.either(),
+                    &gpu_mode.either(),
+                    download,
+                ),
+                SetCommand::Screen(args) => apply_screen(&args, &mut keyboard),
+            }
+        }
+    }
+}
+
+
