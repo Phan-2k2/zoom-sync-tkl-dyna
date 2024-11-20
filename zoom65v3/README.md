@@ -1,3 +1,3 @@
-# zoom-sync-raw
+# zoom65v3
 
-Reverse engineered raw bindings to the zoom65v3 screen module
+Reverse engineered hidapi bindings to zoom65v3 screen modules
