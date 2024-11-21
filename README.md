@@ -52,6 +52,8 @@ nix run github:ozwaldorf/zoom-sync
 
 ## Usage
 
+### CLI
+
 ```
 Cross-platform utility for syncing zoom65v3 screen modules
 
@@ -108,7 +110,7 @@ Available commands:
     set                    Set specific options on the keyboard
 ```
 
-### Set subcommand
+#### Set command
 
 ```
 Set specific options on the keyboard
@@ -123,6 +125,48 @@ Available commands:
     weather     Set weather data
     system      Set system info
     screen      Change current screen
+```
+
+### Running on startup
+
+#### Linux / systemd
+
+A systemd service can be easily setup that will manage running zoom-sync.
+An example can be found at [examples/zoom-sync.service](./examples/zoom-sync.service)
+
+```
+# edit configuration arguments in ExecStart
+vim examples/zoom-sync.service
+
+# copy to system services
+sudo cp examples/zoom-sync.service /etc/systemd/system
+
+# enable and start the servive
+sudo systemctl enable --now zoom-sync.service
+```
+
+#### Windows
+
+> TODO
+
+#### OSX
+
+> TODO
+
+### Examples
+
+```
+# Only update time and weather, and set the screen to weather on connect:
+zoom-sync --no-system --screen weather
+
+# Only update time and system info, and set the screen to cpu temp on connect:
+zoom-sync --no-weather --screen cpu
+
+# Only update time and set screen to the custom gif
+zoom-sync --no-weather --no-system --screen gif
+
+# Use hardcoded coordinates for weather
+zoom-sync --coords 27.1127 109.3497
 ```
 
 ## Feature Checklist
