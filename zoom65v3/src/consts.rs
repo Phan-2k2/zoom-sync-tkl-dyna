@@ -12,13 +12,33 @@ pub mod commands {
         0, 0, 0,
     ];
 
+    /* update method ids */
     pub const ZOOM65_SCREEN_SWITCH: [u8; 2] = [0, 32];
     pub const ZOOM65_SCREEN_DOWN: [u8; 2] = [0, 33];
     pub const ZOOM65_SCREEN_UP: [u8; 2] = [0, 34];
     pub const ZOOM65_SET_TIME_ID: [u8; 2] = [1, 16];
     pub const ZOOM65_SET_WEATHER_ID: [u8; 2] = [1, 32];
     pub const ZOOM65_SET_SYSINFO_ID: [u8; 2] = [1, 64];
+
+    /// 0 = blue, 1 = pink
+    pub const ZOOM65_SET_THEME_ID: [u8; 2] = [1, 255];
     pub const ZOOM65_RESET_SCREEN_ID: [u8; 2] = [1, 255];
+
+    pub const ZOOM65_IMAGE_DELETE: [u8; 2] = [2, 224];
+    pub const ZOOM65_GIF_DELETE: [u8; 2] = [2, 225];
+
+    /// 0 = ??, 1 = image, 2 = gif, 3+ = ??
+    pub const ZOOM65_UPLOAD_START_ID: [u8; 2] = [2, 240];
+
+    /// Always called with [1u8]
+    pub const ZOOM65_UPLOAD_END: [u8; 2] = [2, 241];
+
+    pub const ZOOM65_UPLOAD_LENGTH: [u8; 2] = [2, 208]; // takes 4 bytes, maybe u32 ?
+
+    mod unknown {
+        // 2, 224
+        // 2, 225
+    }
 
     #[allow(unused)]
     /// TODO: should we expose functionality to get this info? is it useful?

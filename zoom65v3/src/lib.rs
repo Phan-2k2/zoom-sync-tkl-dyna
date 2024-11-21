@@ -1,8 +1,12 @@
 //! High level hidapi abstraction for interacting with zoom65v3 screen modules
 
+use std::io::stdout;
+use std::io::Write;
+use std::ops::Deref;
 use std::sync::LazyLock;
 use std::sync::RwLock;
 
+use checksum::checksum;
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
 use consts::commands;
 use float::DumbFloat16;
@@ -12,6 +16,7 @@ use types::ScreenPosition;
 use crate::types::Icon;
 use crate::types::Zoom65Error;
 
+pub mod checksum;
 pub mod consts;
 pub mod float;
 pub mod types;
@@ -64,7 +69,7 @@ impl Zoom65v3 {
     }
 
     /// Internal method to send and parse an update command
-    fn update(&mut self, method_id: [u8; 2], slice: &[u8]) -> Result<(), Zoom65Error> {
+    pub fn update(&mut self, method_id: [u8; 2], slice: &[u8]) -> Result<Vec<u8>, Zoom65Error> {
         // Construct command sequence
         let mut buf = [0u8; 33];
         buf[0] = 0x0;
@@ -82,33 +87,37 @@ impl Zoom65v3 {
         assert!(slice[0] == 88);
 
         // Return result based on output code
-        (slice[2] == 1)
-            .then_some(())
+        (slice[1] == 1 && slice[2] == 1)
+            .then_some(slice.to_vec())
             .ok_or(Zoom65Error::UpdateCommandFailed)
     }
 
     /// Increment the screen position
     #[inline(always)]
     pub fn screen_up(&mut self) -> Result<(), Zoom65Error> {
-        self.update(commands::ZOOM65_SCREEN_UP, &[])
+        self.update(commands::ZOOM65_SCREEN_UP, &[])?;
+        Ok(())
     }
 
     /// Decrement the screen position
     #[inline(always)]
     pub fn screen_down(&mut self) -> Result<(), Zoom65Error> {
-        self.update(commands::ZOOM65_SCREEN_DOWN, &[])
+        self.update(commands::ZOOM65_SCREEN_DOWN, &[])?;
+        Ok(())
     }
 
     /// Switch the active screen
     #[inline(always)]
     pub fn screen_switch(&mut self) -> Result<(), Zoom65Error> {
-        self.update(commands::ZOOM65_SCREEN_SWITCH, &[])
+        self.update(commands::ZOOM65_SCREEN_SWITCH, &[])?;
+        Ok(())
     }
 
     /// Reset the screen back to the meletrix logo
     #[inline(always)]
     pub fn reset_screen(&mut self) -> Result<(), Zoom65Error> {
-        self.update(commands::ZOOM65_RESET_SCREEN_ID, &[])
+        self.update(commands::ZOOM65_RESET_SCREEN_ID, &[])?;
+        Ok(())
     }
 
     /// Set the screen to a specific position and offset
@@ -155,7 +164,8 @@ impl Zoom65v3 {
                 time.minute() as u8,
                 time.second() as u8,
             ],
-        )
+        )?;
+        Ok(())
     }
 
     /// Update the keyboards current weather report
@@ -169,7 +179,8 @@ impl Zoom65v3 {
         self.update(
             commands::ZOOM65_SET_WEATHER_ID,
             &[icon as u8, current, low, high],
-        )
+        )?;
+        Ok(())
     }
 
     /// Update the keyboards current system info
@@ -183,6 +194,79 @@ impl Zoom65v3 {
         self.update(
             commands::ZOOM65_SET_SYSINFO_ID,
             &[cpu_temp, gpu_temp, bytes[0], bytes[1]],
-        )
+        )?;
+        Ok(())
+    }
+
+    fn upload_media(&mut self, buf: impl AsRef<[u8]>, channel: u8) -> Result<(), Zoom65Error> {
+        let image = buf.as_ref();
+
+        // start upload
+        self.update(commands::ZOOM65_UPLOAD_START_ID, &[channel])?;
+        if image.len() > u16::MAX.into() {
+            return Err(Zoom65Error::ImageTooLarge);
+        }
+
+        self.update(
+            commands::ZOOM65_UPLOAD_LENGTH,
+            &(image.len() as u32).to_be_bytes(),
+        )?;
+
+        let total = image.len() / 24;
+        for (i, chunk) in image.chunks(24).enumerate() {
+            print!("\r{i:3}/{total}");
+            stdout().flush().unwrap();
+
+            let chunk_len = chunk.len();
+            let mut buf = [0u8; 33];
+
+            // command prefix
+            buf[0] = 0x0;
+            buf[1] = 88;
+            buf[2] = 2 + chunk_len as u8 + 4;
+
+            // chunk index and data
+            buf[3] = (i >> 8) as u8;
+            buf[4] = (i & 255) as u8;
+            buf[5..5 + chunk.len()].copy_from_slice(chunk);
+
+            // compute checksum
+            let mut offset = 3 + 2 + chunk_len;
+            if i == image.len() / 24 {
+                buf[2] += 1;
+                offset += 1;
+            }
+            let data = &buf[3..offset + 2];
+            let crc = checksum(data);
+            buf[offset..offset + 4].copy_from_slice(&crc);
+
+            // send payload and read response
+            self.write(&buf)?;
+            let len = self.device.read(&mut self.buf)?;
+            let slice = &self.buf[0..len];
+
+            if slice[1] != 1 || slice[2] != 1 {
+                println!("\n{buf:?} -> \n{slice:?}");
+                return Err(Zoom65Error::UpdateCommandFailed);
+            }
+        }
+
+        self.update(commands::ZOOM65_UPLOAD_END, &[1])?;
+        // TODO: is this required?
+        self.reset_screen()?;
+
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub fn upload_gif(&mut self, buf: impl AsRef<[u8]>) -> Result<(), Zoom65Error> {
+        self.upload_media(buf, 2)
+    }
+}
+
+impl Deref for Zoom65v3 {
+    type Target = HidDevice;
+    fn deref(&self) -> &Self::Target {
+        &self.device
     }
 }

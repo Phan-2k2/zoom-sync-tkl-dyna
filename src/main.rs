@@ -1,5 +1,6 @@
 //! Main cli binary
 
+use std::path::PathBuf;
 use std::{error::Error, time::Duration};
 
 use bpaf::{Bpaf, Parser};
@@ -74,6 +75,10 @@ enum SetCommand {
     /// Change current screen
     #[bpaf(command, fallback_to_usage)]
     Screen(#[bpaf(external(screen_args))] ScreenArgs),
+
+    /// Upload image/gif media
+    #[bpaf(command)]
+    Gif(#[bpaf(positional("PATH"))] PathBuf)
 }
 
 #[derive(Clone, Debug, Bpaf)]
@@ -172,9 +177,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let mut keyboard = Zoom65v3::open()?;
             match set_command {
                 SetCommand::Time => apply_time(&mut keyboard),
-                SetCommand::Weather { farenheit, mut weather_args } => {
-                    apply_weather(&mut keyboard, &mut weather_args, farenheit).await
-                }
+                SetCommand::Weather {
+                    farenheit,
+                    mut weather_args,
+                } => apply_weather(&mut keyboard, &mut weather_args, farenheit).await,
                 SetCommand::System {
                     farenheit,
                     cpu_mode,
@@ -188,9 +194,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     download,
                 ),
                 SetCommand::Screen(args) => apply_screen(&args, &mut keyboard),
+                SetCommand::Gif(path) => {
+                    let gif = std::fs::read(path)?;
+                    keyboard.upload_gif(gif)?;
+                    Ok(())
+                }
             }
         }
     }
 }
-
-

@@ -10,6 +10,8 @@ pub enum Zoom65Error {
     UnknownFirmwareVersion,
     #[error("keyboard responded with error while updating, byte 1 == 88 && byte 2 == 0")]
     UpdateCommandFailed,
+    #[error("the provided image was too large")]
+    ImageTooLarge,
     #[error("{_0}")]
     Hid(#[from] HidError),
 }
