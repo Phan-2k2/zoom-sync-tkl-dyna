@@ -19,6 +19,7 @@ Cross-platform utility to sync Zoom65 v3 screen modules.
 | Download rate       | WIP              | Supported                       |
 | Manual data         | Supported        | Not supported                   |
 | Single update mode  | Supported        | Not supported                   |
+| Reactive image/gif  | Supported        | Not supported                   |
 | Future-proof        | Will always work | Overflow errors after year 2255 |
 
 ## Third Party Services
@@ -155,6 +156,8 @@ sudo systemctl enable --now zoom-sync.service
 
 ### Examples
 
+Here are a few examples of how configuration options can be mixed together:
+
 ```
 # Only update time and weather, and set the screen to weather on connect:
 zoom-sync --no-system --screen weather
@@ -162,11 +165,11 @@ zoom-sync --no-system --screen weather
 # Only update time and system info, and set the screen to cpu temp on connect:
 zoom-sync --no-weather --screen cpu
 
-# Only update time and set screen to the custom gif
-zoom-sync --no-weather --no-system --screen gif
-
-# Use hardcoded coordinates for weather
+# Use hardcoded coordinates for fetching weather
 zoom-sync --coords 27.1127 109.3497
+
+# Enable reactive mode and dont update any other data
+zoom-sync --reactive --no-system --no-weather
 ```
 
 ## Feature Checklist
@@ -176,15 +179,20 @@ zoom-sync --coords 27.1127 109.3497
   - [x] Weather (current, min, max)
   - [x] CPU/GPU temp
   - [x] Download rate
+  - [x] Screen up/down/switch
+  - [x] GIF image
+  - [ ] Static image
 - [x] Fetch current weather report
 - [x] Fetch CPU temp
-- [x] Fetch Nvidia GPU temp
-- [ ] Fetch AMD GPU temp
+- [x] Fetch GPU temp
+  - [x] Nvidia
+  - [ ] AMD
 - [ ] Monitor download rate
 - [x] Poll and reconnect to keyboard
 - [x] CLI arguments
+- [x] Update intervals for each value
+- [x] Simulate reactive gif mode (linux)
 - [ ] System tray menu
-- [ ] Update intervals for each value
 - [ ] Package releases
   - [ ] Crates.io
   - [ ] Nixpkgs
