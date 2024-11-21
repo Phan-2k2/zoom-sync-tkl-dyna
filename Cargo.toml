@@ -16,13 +16,18 @@ zoom65v3 = { path = "./zoom65v3", version = "0.1.0" }
 
 # runtime and scaffalding
 tokio = { version = "1.41", features = ["full"] }
+tokio-stream = "0.1.16"
+futures = "0.3.31"
 bpaf = { version = "0.9", features = ["derive", "dull-color"] }
 either = "1.13"
 
 # data fetching
-chrono.workspace = true
+chrono.workspace = true # time
 ipinfo = "3.0.1" # geolocation
 open-meteo-api = "0.1.4" # weather
 nvml-wrapper = "0.10.0" # nvidia temp
 sysinfo = "0.32.0" # cpu temp
+
+[target.'cfg(target_os = "linux")'.dependencies]
+evdev = { version = "0.12.2", features = ["tokio"] } # reading keypress events
 

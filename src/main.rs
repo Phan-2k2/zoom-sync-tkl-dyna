@@ -5,7 +5,10 @@ use std::{error::Error, time::Duration};
 
 use bpaf::{Bpaf, Parser};
 use either::Either;
+use evdev::InputEventKind;
 use info::apply_system;
+use screen::screen_args_with_reactive;
+use tokio_stream::StreamExt;
 use weather::apply_weather;
 use zoom65v3::Zoom65v3;
 
@@ -30,19 +33,24 @@ No effect on any manually provided data.",
 
 #[derive(Debug, Clone, Bpaf)]
 struct RefreshArgs {
-    /// Continuously refresh the data at a given interval
-    #[bpaf(short, long, fallback(30), display_fallback)]
-    refresh: u64,
+    /// Continuously refresh system data at a given interval
+    #[bpaf(short('S'), long, fallback(30), display_fallback)]
+    refresh_system: u64,
+    /// Continuously refresh system data at a given interval
+    #[bpaf(short('S'), long, fallback(30), display_fallback)]
+    refresh_weather: u64,
+
     /// Retry interval for reconnecting to keyboard
     #[bpaf(short('R'), long, fallback(5), display_fallback)]
     retry: u64,
+
     #[bpaf(external)]
     farenheit: bool,
-    #[bpaf(external, optional)]
+    #[bpaf(external(screen_args_with_reactive), optional)]
     screen_args: Option<ScreenArgs>,
-    #[bpaf(external(weather_args))]
+    #[bpaf(external)]
     weather_args: WeatherArgs,
-    #[bpaf(external(system_args))]
+    #[bpaf(external)]
     system_args: SystemArgs,
 }
 
@@ -75,10 +83,9 @@ enum SetCommand {
     /// Change current screen
     #[bpaf(command, fallback_to_usage)]
     Screen(#[bpaf(external(screen_args))] ScreenArgs),
-
     /// Upload image/gif media
-    #[bpaf(command)]
-    Gif(#[bpaf(positional("PATH"))] PathBuf)
+    #[bpaf(command, fallback_to_usage)]
+    Gif(#[bpaf(positional("PATH"))] PathBuf),
 }
 
 #[derive(Clone, Debug, Bpaf)]
@@ -94,6 +101,15 @@ enum Cli {
     },
 }
 
+pub fn apply_time(keyboard: &mut Zoom65v3) -> Result<(), Box<dyn Error>> {
+    let time = chrono::Local::now();
+    keyboard
+        .set_time(time)
+        .map_err(|e| format!("failed to set time: {e}"))?;
+    println!("updated time to {time}");
+    Ok(())
+}
+
 async fn refresh(mut args: RefreshArgs) -> Result<(), Box<dyn Error>> {
     let mut cpu = match &args.system_args {
         SystemArgs::Disabled => None,
@@ -104,68 +120,108 @@ async fn refresh(mut args: RefreshArgs) -> Result<(), Box<dyn Error>> {
         SystemArgs::Enabled { gpu_mode, .. } => Some(gpu_mode.either()),
     };
 
-    'outer: loop {
-        let mut keyboard = match Zoom65v3::open() {
-            Ok(k) => k,
-            Err(e) => {
-                eprintln!("error: {e}\nreconnecting in {} seconds...", args.retry);
-                tokio::time::sleep(Duration::from_secs(args.retry)).await;
-                continue 'outer;
-            }
-        };
-
-        let version = keyboard
-            .get_version()
-            .map_err(|e| format!("failed to get keyboard version: {e}"))?;
-        println!("connected to keyboard version {version}");
-
-        if let Some(ref args) = args.screen_args {
-            if let Err(e) = apply_screen(args, &mut keyboard) {
-                eprintln!("error: {e}");
-                continue 'outer;
-            }
-            println!("set screen");
-        }
-
-        loop {
-            println!();
-            if let Err(e) = run(&mut args, &mut keyboard, &mut cpu, &gpu).await {
-                eprintln!("error: {e}");
-                continue 'outer;
-            }
-            tokio::time::sleep(Duration::from_secs(args.refresh)).await
+    loop {
+        if let Err(e) = run(&mut args, &mut cpu, &gpu).await {
+            eprintln!("error: {e}\nreconnecting in {} seconds...", args.retry);
+            tokio::time::sleep(Duration::from_secs(args.retry)).await;
         }
     }
 }
 
 async fn run(
     args: &mut RefreshArgs,
-    keyboard: &mut Zoom65v3,
     cpu: &mut Option<Either<info::CpuTemp, u8>>,
     gpu: &Option<Either<info::GpuTemp, u8>>,
 ) -> Result<(), Box<dyn Error>> {
-    apply_time(keyboard)?;
-    if let SystemArgs::Enabled { download, .. } = args.system_args {
-        apply_system(
-            keyboard,
-            args.farenheit,
-            cpu.as_mut().unwrap(),
-            gpu.as_ref().unwrap(),
-            download,
-        )?;
+    let mut keyboard = Zoom65v3::open()?;
+    let version = keyboard
+        .get_version()
+        .map_err(|e| format!("failed to get keyboard version: {e}"))?;
+    println!("connected to keyboard version {version}");
+
+    apply_time(&mut keyboard)?;
+
+    if let Some(ref args) = args.screen_args {
+        #[cfg(not(target_os = "linux"))]
+        {
+            apply_screen(args, &mut keyboard)?;
+            println!("set screen");
+        }
+        #[cfg(target_os = "linux")]
+        if *args != ScreenArgs::Reactive {
+            apply_screen(args, &mut keyboard)?;
+            println!("set screen");
+        }
     }
-    apply_weather(keyboard, &mut args.weather_args, args.farenheit).await?;
 
-    Ok(())
-}
+    #[cfg(not(target_os = "linux"))]
+    let reactive_stream = None;
+    #[cfg(target_os = "linux")]
+    let mut reactive_stream = args.screen_args.and_then(|args| match args {
+        ScreenArgs::Reactive => {
+            println!("initializing reactive mode");
+            keyboard
+                .set_screen(zoom65v3::types::LogoOffset::Image.pos())
+                .unwrap();
+            let stream = evdev::enumerate().find_map(|(_, device)| {
+                device
+                    .name()
+                    .unwrap()
+                    .contains("Zoom65 v3 Keyboard")
+                    .then_some(
+                        device
+                            .into_event_stream()
+                            .map(|s| Box::pin(s.timeout(Duration::from_millis(500))))
+                            .ok(),
+                    )
+                    .flatten()
+            });
+            stream
+        }
+        _ => None,
+    });
+    #[cfg(target_os = "linux")]
+    let mut is_reactive_running = false;
 
-pub fn apply_time(keyboard: &mut Zoom65v3) -> Result<(), Box<dyn Error>> {
-    let time = chrono::Local::now();
-    keyboard
-        .set_time(time)
-        .map_err(|e| format!("failed to set time: {e}"))?;
-    println!("updated time to {time}");
-    Ok(())
+    let mut weather_tick = tokio::time::interval(Duration::from_secs(args.refresh_weather));
+    let mut system_tick = tokio::time::interval(Duration::from_secs(args.refresh_system));
+
+    loop {
+        tokio::select! {
+            _ = weather_tick.tick() => apply_weather(&mut keyboard, &mut args.weather_args, args.farenheit).await?,
+            _ = system_tick.tick() => {
+                if let SystemArgs::Enabled { download, .. } = args.system_args {
+                    apply_system(
+                        &mut keyboard,
+                        args.farenheit,
+                        cpu.as_mut().unwrap(),
+                        gpu.as_ref().unwrap(),
+                        download,
+                    )?;
+                }
+            },
+            Some(Some(res)) = futures::future::OptionFuture::from(reactive_stream.as_mut().map(|s| s.next())) => {
+                match res {
+                    Ok(Err(e)) => return Err(Box::new(e)),
+                    // keypress, play gif if not already running
+                    Ok(Ok(ev)) if !is_reactive_running => {
+                        if matches!(ev.kind(), InputEventKind::Key(_)) {
+                            is_reactive_running = true;
+                            keyboard.screen_switch()?;
+                        }
+                    },
+                    // timeout, reset back to image
+                    Err(_) if is_reactive_running => {
+                        is_reactive_running = false;
+                        keyboard.screen_switch()?;
+                        keyboard.screen_switch()?;
+                        keyboard.screen_switch()?;
+                    },
+                    _ => {}
+                }
+            }
+        }
+    }
 }
 
 #[tokio::main]
