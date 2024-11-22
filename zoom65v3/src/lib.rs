@@ -1,10 +1,8 @@
 //! High level hidapi abstraction for interacting with zoom65v3 screen modules
 
-use std::io::stdout;
-use std::io::Write;
+use std::io::{Write, stdout};
 use std::ops::Deref;
-use std::sync::LazyLock;
-use std::sync::RwLock;
+use std::sync::{LazyLock, RwLock};
 
 use checksum::checksum;
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
@@ -13,8 +11,7 @@ use float::DumbFloat16;
 use hidapi::{HidApi, HidDevice};
 use types::ScreenPosition;
 
-use crate::types::Icon;
-use crate::types::Zoom65Error;
+use crate::types::{Icon, Zoom65Error};
 
 pub mod checksum;
 pub mod consts;
@@ -133,13 +130,13 @@ impl Zoom65v3 {
                 for _ in 0..y.abs() {
                     self.screen_up()?;
                 }
-            }
+            },
             y if y > 0 => {
                 for _ in 0..y.abs() {
                     self.screen_down()?;
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         }
 
         // Switch screen to offset
@@ -152,19 +149,16 @@ impl Zoom65v3 {
 
     /// Update the keyboards current time
     pub fn set_time<Tz: TimeZone>(&mut self, time: DateTime<Tz>) -> Result<(), Zoom65Error> {
-        self.update(
-            commands::ZOOM65_SET_TIME_ID,
-            &[
-                // Provide the current year without the century.
-                // This prevents overflows on the year 2256 (meletrix web ui just subtracts 2000)
-                (time.year() % 100) as u8,
-                time.month() as u8,
-                time.day() as u8,
-                time.hour() as u8,
-                time.minute() as u8,
-                time.second() as u8,
-            ],
-        )?;
+        self.update(commands::ZOOM65_SET_TIME_ID, &[
+            // Provide the current year without the century.
+            // This prevents overflows on the year 2256 (meletrix web ui just subtracts 2000)
+            (time.year() % 100) as u8,
+            time.month() as u8,
+            time.day() as u8,
+            time.hour() as u8,
+            time.minute() as u8,
+            time.second() as u8,
+        ])?;
         Ok(())
     }
 
@@ -176,10 +170,9 @@ impl Zoom65v3 {
         low: u8,
         high: u8,
     ) -> Result<(), Zoom65Error> {
-        self.update(
-            commands::ZOOM65_SET_WEATHER_ID,
-            &[icon as u8, current, low, high],
-        )?;
+        self.update(commands::ZOOM65_SET_WEATHER_ID, &[
+            icon as u8, current, low, high,
+        ])?;
         Ok(())
     }
 
@@ -191,10 +184,9 @@ impl Zoom65v3 {
         download_rate: f32,
     ) -> Result<(), Zoom65Error> {
         let bytes = DumbFloat16::new(download_rate).to_bit_repr();
-        self.update(
-            commands::ZOOM65_SET_SYSINFO_ID,
-            &[cpu_temp, gpu_temp, bytes[0], bytes[1]],
-        )?;
+        self.update(commands::ZOOM65_SET_SYSINFO_ID, &[
+            cpu_temp, gpu_temp, bytes[0], bytes[1],
+        ])?;
         Ok(())
     }
 
@@ -232,7 +224,7 @@ impl Zoom65v3 {
 
             // compute checksum
             let mut offset = 3 + 2 + chunk_len;
-            if i == image.len() / 24 {
+            if channel == 2 && i == image.len() / 24 {
                 buf[2] += 1;
                 offset += 1;
             }
@@ -258,9 +250,28 @@ impl Zoom65v3 {
         Ok(())
     }
 
+    /// Upload an image to the keyboard. Must be encoded as 110x110 RGBA-3328 raw buffer
+    #[inline(always)]
+    pub fn upload_image(&mut self, buf: impl AsRef<[u8]>) -> Result<(), Zoom65Error> {
+        self.upload_media(buf, 1)
+    }
+
+    /// Upload a gif to the keyboard. Must be 110x110.
     #[inline(always)]
     pub fn upload_gif(&mut self, buf: impl AsRef<[u8]>) -> Result<(), Zoom65Error> {
         self.upload_media(buf, 2)
+    }
+
+    /// Clear the image slot
+    #[inline(always)]
+    pub fn clear_image(&mut self) -> Result<(), Zoom65Error> {
+        self.update(commands::ZOOM65_IMAGE_DELETE, &[]).map(|_| ())
+    }
+
+    /// Clear the gif slot
+    #[inline(always)]
+    pub fn clear_gif(&mut self) -> Result<(), Zoom65Error> {
+        self.update(commands::ZOOM65_GIF_DELETE, &[]).map(|_| ())
     }
 }
 

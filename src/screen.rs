@@ -1,7 +1,8 @@
 use std::error::Error;
 
-use bpaf::{construct, Bpaf, Parser};
-use zoom65v3::{types::ScreenPosition, Zoom65v3};
+use bpaf::{Bpaf, Parser, construct};
+use zoom65v3::Zoom65v3;
+use zoom65v3::types::ScreenPosition;
 
 /// Screen options:
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Bpaf)]
@@ -33,10 +34,8 @@ pub fn screen_args_with_reactive() -> impl Parser<ScreenArgs> {
     #[cfg(target_os = "linux")]
     {
         let reactive = bpaf::long("reactive")
-            .switch()
-            .map(|_| ScreenArgs::Reactive);
-        let screen_args = screen_args();
-        construct!([reactive, screen_args])
+            .req_flag(ScreenArgs::Reactive);
+        construct!([reactive, screen_args()])
     }
 }
 

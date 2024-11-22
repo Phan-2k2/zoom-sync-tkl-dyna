@@ -1,4 +1,5 @@
-use std::{fmt::Debug, ops::Not};
+use std::fmt::Debug;
+use std::ops::Not;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DumbFloat16(u16);

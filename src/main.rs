@@ -1,22 +1,23 @@
 //! Main cli binary
 
+use std::error::Error;
 use std::path::PathBuf;
-use std::{error::Error, time::Duration};
+use std::time::Duration;
 
 use bpaf::{Bpaf, Parser};
 use either::Either;
 use evdev::InputEventKind;
-use info::apply_system;
-use screen::screen_args_with_reactive;
+use futures::future::OptionFuture;
 use tokio_stream::StreamExt;
-use weather::apply_weather;
 use zoom65v3::Zoom65v3;
 
-use crate::info::{cpu_mode, gpu_mode, system_args, CpuMode, GpuMode, SystemArgs};
-use crate::screen::{apply_screen, screen_args, ScreenArgs};
-use crate::weather::{weather_args, WeatherArgs};
+use crate::info::{CpuMode, GpuMode, SystemArgs, apply_system, cpu_mode, gpu_mode, system_args};
+use crate::media::encode_image;
+use crate::screen::{ScreenArgs, apply_screen, screen_args, screen_args_with_reactive};
+use crate::weather::{WeatherArgs, apply_weather, weather_args};
 
 mod info;
+mod media;
 mod screen;
 mod weather;
 
@@ -33,17 +34,15 @@ No effect on any manually provided data.",
 
 #[derive(Debug, Clone, Bpaf)]
 struct RefreshArgs {
-    /// Continuously refresh system data at a given interval
-    #[bpaf(short('S'), long, fallback(30), display_fallback)]
+    /// Continuously refresh system data at a given interval (in seconds)
+    #[bpaf(short('S'), long, fallback(10), display_fallback)]
     refresh_system: u64,
-    /// Continuously refresh system data at a given interval
-    #[bpaf(short('S'), long, fallback(30), display_fallback)]
+    /// Continuously refresh system data at a given interval (in seconds)
+    #[bpaf(short('W'), long, fallback(60 * 60), display_fallback)]
     refresh_weather: u64,
-
     /// Retry interval for reconnecting to keyboard
     #[bpaf(short('R'), long, fallback(5), display_fallback)]
     retry: u64,
-
     #[bpaf(external)]
     farenheit: bool,
     #[bpaf(external(screen_args_with_reactive), optional)]
@@ -85,7 +84,16 @@ enum SetCommand {
     Screen(#[bpaf(external(screen_args))] ScreenArgs),
     /// Upload image/gif media
     #[bpaf(command, fallback_to_usage)]
+    Image(
+        #[bpaf(short('n'), long("nearest"))] bool,
+        #[bpaf(positional("PATH"))] PathBuf,
+    ),
+    /// Upload image/gif media
+    #[bpaf(command, fallback_to_usage)]
     Gif(#[bpaf(positional("PATH"))] PathBuf),
+    /// Clear media files
+    #[bpaf(command)]
+    Clear,
 }
 
 #[derive(Clone, Debug, Bpaf)]
@@ -176,20 +184,25 @@ async fn run(
                     )
                     .flatten()
             });
+            if stream.is_none() {
+                eprintln!("warning: couldn't find/access ev device");
+            }
             stream
-        }
+        },
         _ => None,
     });
     #[cfg(target_os = "linux")]
     let mut is_reactive_running = false;
 
-    let mut weather_tick = tokio::time::interval(Duration::from_secs(args.refresh_weather));
-    let mut system_tick = tokio::time::interval(Duration::from_secs(args.refresh_system));
+    let mut weather_interval = tokio::time::interval(Duration::from_secs(args.refresh_weather));
+    let mut system_interval = tokio::time::interval(Duration::from_secs(args.refresh_system));
 
     loop {
         tokio::select! {
-            _ = weather_tick.tick() => apply_weather(&mut keyboard, &mut args.weather_args, args.farenheit).await?,
-            _ = system_tick.tick() => {
+            _ = weather_interval.tick() => {
+                apply_weather(&mut keyboard, &mut args.weather_args, args.farenheit).await?
+            },
+            _ = system_interval.tick() => {
                 if let SystemArgs::Enabled { download, .. } = args.system_args {
                     apply_system(
                         &mut keyboard,
@@ -200,7 +213,7 @@ async fn run(
                     )?;
                 }
             },
-            Some(Some(res)) = futures::future::OptionFuture::from(reactive_stream.as_mut().map(|s| s.next())) => {
+            Some(Some(res)) = OptionFuture::from(reactive_stream.as_mut().map(|s| s.next())) => {
                 match res {
                     Ok(Err(e)) => return Err(Box::new(e)),
                     // keypress, play gif if not already running
@@ -250,12 +263,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     download,
                 ),
                 SetCommand::Screen(args) => apply_screen(&args, &mut keyboard),
+                SetCommand::Image(nearest, path) => {
+                    let image = ::image::open(path)?;
+                    let encoded = encode_image(image, nearest).ok_or("failed to encode image")?;
+                    keyboard.upload_image(encoded)?;
+                    Ok(())
+                },
                 SetCommand::Gif(path) => {
                     let gif = std::fs::read(path)?;
                     keyboard.upload_gif(gif)?;
                     Ok(())
-                }
+                },
+                SetCommand::Clear => {
+                    keyboard.clear_image()?;
+                    keyboard.clear_gif()?;
+                    Ok(())
+                },
             }
-        }
+        },
     }
 }

@@ -6,7 +6,8 @@ use bpaf::Bpaf;
 use chrono::Timelike;
 use ipinfo::IpInfo;
 use open_meteo_api::query::OpenMeteo;
-use zoom65v3::{types::Icon, Zoom65v3};
+use zoom65v3::Zoom65v3;
+use zoom65v3::types::Icon;
 
 #[derive(Clone, Debug, Bpaf)]
 #[bpaf(adjacent)]
@@ -36,7 +37,8 @@ pub enum WeatherArgs {
     },
     #[bpaf(adjacent)]
     Manual {
-        /// Manually provide weather data, skipping open-meteo weather api. All values are unitless.
+        /// Manually provide weather data, skipping open-meteo weather api. All values are
+        /// unitless.
         #[bpaf(short, long)]
         #[allow(dead_code)]
         weather: (),
@@ -116,7 +118,7 @@ pub async fn apply_weather(
                             lat,
                             long,
                         })
-                    }
+                    },
                     Err(e) => eprintln!("warning: failed to fetch geolocation from ipinfo: {e}"),
                 }
             }
@@ -131,11 +133,11 @@ pub async fn apply_weather(
                         println!(
                             "updated weather {{ icon: {icon:?}, current: {temp}, min: {min}, max: {max} }}"
                         );
-                    }
+                    },
                     Err(e) => eprintln!("failed to fetch weather, skipping: {e}"),
                 }
             }
-        }
+        },
         WeatherArgs::Manual {
             wmo,
             current,
@@ -151,7 +153,7 @@ pub async fn apply_weather(
                 *min,
                 *max,
             )?;
-        }
+        },
     }
 
     Ok(())

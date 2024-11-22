@@ -1,10 +1,12 @@
 //! Utilities for getting system info
 
-use std::{error::Error, sync::LazyLock};
+use std::error::Error;
+use std::sync::LazyLock;
 
 use bpaf::Bpaf;
 use either::Either;
-use nvml_wrapper::{enum_wrappers::device::TemperatureSensor, Device, Nvml};
+use nvml_wrapper::enum_wrappers::device::TemperatureSensor;
+use nvml_wrapper::{Device, Nvml};
 use sysinfo::{Component, Components};
 use zoom65v3::Zoom65v3;
 
@@ -173,7 +175,9 @@ pub fn apply_system(
     keyboard
         .set_system_info(cpu_temp, gpu_temp, download)
         .map_err(|e| format!("failed to set system info: {e}"))?;
-    println!("updated system info {{ cpu_temp: {cpu_temp}, gpu_temp: {gpu_temp}, download: {download} }}");
+    println!(
+        "updated system info {{ cpu_temp: {cpu_temp}, gpu_temp: {gpu_temp}, download: {download} }}"
+    );
 
     Ok(())
 }
