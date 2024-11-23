@@ -353,3 +353,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
         },
     }
 }
+
+#[cfg(test)]
+#[test]
+fn generate_docs() {
+    let app = env!("CARGO_PKG_NAME");
+    let options = cli();
+
+    let roff = options.render_manpage(app, bpaf::doc::Section::General, None, None, None);
+    std::fs::write("docs/zoom-sync.1", roff).expect("failed to write manpage");
+
+    let md = options.header("").render_markdown(app);
+    std::fs::write("docs/README.md", md).expect("failed to write markdown docs");
+}

@@ -2,25 +2,25 @@
 
 Cross-platform utility to sync Zoom65 v3 screen modules.
 
-## Comparison
+## Features
 
-|                     | zoom-sync        | MeletrixID                      |
-| ------------------- | ---------------- | ------------------------------- |
-| Supported platforms | cross-platform   | Windows, OSX                    |
-| FOSS ?              | FOSS. Always.    | Free, but not open sourced      |
-| Languages           | English          | Chinese or english              |
+|                     | zoom-sync              | MeletrixID / WuqueID            |
+| ------------------- | ---------------------- | ------------------------------- |
+| Supported platforms | Cross-platform         | Windows, OSX                    |
+| FOSS ?              | FOSS. Always.          | Free, but not open sourced      |
+| Languages           | English                | Chinese or English              |
 | Weather api         | [open-meteo](https://open-meteo.com) | Unknown centralized service |
 | Geolocation api     | [ipinfo](https://ipinfo.io) or manual | Bundled into weather api |
-| VPN workaround      | With manual geo  | Only uses vpn's ip for location |
-| Temperature units   | °C or °F         | °C only                         |
-| Time sync           | Supported        | Supported                       |
-| CPU temperature     | Supported        | Supported                       |
-| GPU temperature     | Nvidia           | Supported ?                     |
-| Download rate       | WIP              | Supported                       |
-| Manual data         | Supported        | Not supported                   |
-| Single update mode  | Supported        | Not supported                   |
-| Reactive image/gif  | Supported        | Not supported                   |
-| Future-proof        | Will always work | Overflow errors after year 2255 |
+| VPN workaround      | Manual geo coordinates | Not supported                     |
+| Temperature units   | °C or °F               | °C only                         |
+| Time sync           | Supported              | Supported                       |
+| CPU temperature     | Supported              | Supported                       |
+| GPU temperature     | Nvidia only            | Supported                       |
+| Download rate       | Manual only            | Supported                       |
+| Manually set data   | Supported              | Not supported                   |
+| Image/gif upload    | Supported              | Not supported (use web driver)  |
+| Reactive image/gif  | Simulated              | Not supported                   |
+| Future-proof        | Will always work       | Overflow errors after year 2255 |
 
 ## Third Party Services
 
@@ -38,7 +38,7 @@ Requirements:
 - libudev (linux, included with systemd)
 - openssl
 
-```
+```bash
 git clone https://github.com/ozwaldorf/zoom-sync && cd zoom-sync
 cargo install --path .
 ```
@@ -47,7 +47,7 @@ cargo install --path .
 
 > Note: On nixos, you must use the flake for nvidia gpu temp to work
 
-```
+```bash
 nix run github:ozwaldorf/zoom-sync
 ```
 
@@ -55,100 +55,21 @@ nix run github:ozwaldorf/zoom-sync
 
 ### CLI
 
-```
-Cross-platform utility for syncing zoom65v3 screen modules
-
-Usage: zoom-sync ([-S=ARG] [-W=ARG] [-R=ARG] [-f]
-    [--reactive | (-s=POSITION | --up | --down | --switch)]
-    (--no-weather | [--coords LAT LON] | -w WMO CUR MIN MAX)
-    (--no-system | ([--cpu=LABEL] | -c=TEMP) ([--gpu=ID] | -g=TEMP) [-d=ARG])
-    | COMMAND ...)
-
-Screen options:
-        --reactive            Enable reactive mode, playing gif when typing and image when resting.
-                              Requires root permission for reading keypresses via evdev
-    -s, --screen=POSITION     Reset and move the screen to a specific position.
-                              [cpu|gpu|download|time|weather|meletrix|zoom65|image|gif|battery]
-        --up                  Move the screen up
-        --down                Move the screen down
-        --switch              Switch the screen offset
-
-Weather forecast options:
-        --no-weather          Disable updating weather info completely
-  --coords LAT LON
-        --coords              Optional coordinates to use for fetching weather data, skipping ipinfo
-                              geolocation api.
-    LAT                       Latitude
-    LON                       Longitude
-
-  -w WMO CUR MIN MAX
-    -w, --weather             Manually provide weather data, skipping open-meteo weather api. All
-                              values are unitless.
-    WMO                       WMO Index
-    CUR                       Current temperature
-    MIN                       Minumum temperature
-    MAX                       Maximum temperature
-
-System info options:
-        --no-system           Disable updating system info completely
-        --cpu=LABEL           Sensor label to search for
-                              [default: coretemp Package]
-    -c, --cpu-temp=TEMP       Manually set CPU temperature
-        --gpu=ID              GPU device id to fetch temperature data for (nvidia only)
-                              [default: 0]
-    -g, --gpu-temp=TEMP       Manually set GPU temperature
-    -d, --download=ARG        Manually set download speed
-
-Available options:
-    -S, --refresh-system=ARG  Continuously refresh system data at a given interval (in seconds)
-                              [default: 10]
-    -W, --refresh-weather=ARG  Continuously refresh system data at a given interval (in seconds)
-                              [default: 3600]
-    -R, --retry=ARG           Retry interval for reconnecting to keyboard
-                              [default: 5]
-    -f, --farenheit           Use farenheit for all fetched temperatures. May cause clamping for
-                              anything greater than 99F. No effect on any manually provided data.
-    -h, --help                Prints help information
-    -V, --version             Prints version information
-
-Available commands:
-    set                       Set specific options on the keyboard.
-
-```
-
-#### Set command
-
-```
-Set specific options on the keyboard. Must not be used while zoom-sync is already running.
-
-Usage: zoom-sync set COMMAND ...
-
-Available options:
-    -h, --help  Prints help information
-
-Available commands:
-    time        Sync time to system clock
-    weather     Set weather data
-    system      Set system info
-    screen      Change current screen
-    image       Upload static image
-    gif         Upload animated image (gif/webp/apng)
-    clear       Clear all media files
-```
+Detailed command line documentation can be found in [docs/README.md](./docs/README.md).
 
 ### Running on startup
 
 #### Linux / systemd
 
 A systemd service can be easily setup that will manage running zoom-sync.
-An example can be found at [examples/zoom-sync.service](./examples/zoom-sync.service)
+An example can be found at [docs/zoom-sync.service](./docs/zoom-sync.service).
 
-```
+```bash
 # edit configuration arguments in ExecStart
-vim examples/zoom-sync.service
+vim docs/zoom-sync.service
 
 # copy to system services
-sudo cp examples/zoom-sync.service /etc/systemd/system
+sudo cp docs/zoom-sync.service /etc/systemd/system
 
 # enable and start the servive
 sudo systemctl enable --now zoom-sync.service
@@ -162,13 +83,9 @@ sudo systemctl enable --now zoom-sync.service
 
 > TODO
 
-### Examples
+### Simple examples
 
-#### Refresh Mode
-
-Here are a few examples of how configuration options can be mixed together in the refresh mode:
-
-```
+```bash
 # Only update time and weather, and set the screen to weather on connect:
 zoom-sync --no-system --screen weather
 
@@ -182,6 +99,10 @@ zoom-sync --coords 27.1127 109.3497
 zoom-sync set image my-anim.gif
 zoom-sync set gif my-anim.gif
 zoom-sync --reactive --no-system --no-weather
+
+# clear image and gif back to the chrome dino and nyancat
+zoom-sync set image clear
+zoom-sync set gif clear
 
 # set time
 zoom-sync set time
@@ -199,7 +120,7 @@ zoom-sync set weather -w 0 10 20 5
   - [x] Download rate
   - [x] Screen up/down/switch
   - [x] GIF image
-  - [ ] Static image
+  - [x] Static image
 - [x] Fetch current weather report
 - [x] Fetch CPU temp
 - [x] Fetch GPU temp

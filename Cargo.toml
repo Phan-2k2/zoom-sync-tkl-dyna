@@ -22,7 +22,7 @@ rayon = "1.10.0"
 either = "1.13"
 
 # cli parsing
-bpaf = { version = "0.9", features = ["derive", "dull-color"] }
+bpaf = { version = "0.9", features = ["derive", "dull-color", "docgen"] }
 humantime = "2.1.0"
 
 # media utils
