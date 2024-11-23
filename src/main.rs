@@ -1,20 +1,27 @@
 //! Main cli binary
 
 use std::error::Error;
+use std::io::Seek;
 use std::path::PathBuf;
+use std::process::exit;
 use std::time::Duration;
 
 use bpaf::{Bpaf, Parser};
 use either::Either;
 use evdev::InputEventKind;
 use futures::future::OptionFuture;
+use image::codecs::gif::GifDecoder;
+use image::codecs::png::PngDecoder;
+use image::codecs::webp::WebPDecoder;
+use image::AnimationDecoder;
+use media::encode_gif;
 use tokio_stream::StreamExt;
 use zoom65v3::Zoom65v3;
 
-use crate::info::{CpuMode, GpuMode, SystemArgs, apply_system, cpu_mode, gpu_mode, system_args};
+use crate::info::{apply_system, cpu_mode, gpu_mode, system_args, CpuMode, GpuMode, SystemArgs};
 use crate::media::encode_image;
-use crate::screen::{ScreenArgs, apply_screen, screen_args, screen_args_with_reactive};
-use crate::weather::{WeatherArgs, apply_weather, weather_args};
+use crate::screen::{apply_screen, screen_args, screen_args_with_reactive, ScreenArgs};
+use crate::weather::{apply_weather, weather_args, WeatherArgs};
 
 mod info;
 mod media;
@@ -85,12 +92,19 @@ enum SetCommand {
     /// Upload image/gif media
     #[bpaf(command, fallback_to_usage)]
     Image(
+        /// Use nearest neighbor interpolation when resizing, otherwise uses gaussian.
         #[bpaf(short('n'), long("nearest"))] bool,
+        /// Path to image to re-encode and upload
         #[bpaf(positional("PATH"))] PathBuf,
     ),
     /// Upload image/gif media
     #[bpaf(command, fallback_to_usage)]
-    Gif(#[bpaf(positional("PATH"))] PathBuf),
+    Gif(
+        /// Use nearest neighbor interpolation when resizing, otherwise uses gaussian.
+        #[bpaf(short('n'), long("nearest"))] bool,
+        /// Path to animation to re-encode and upload
+        #[bpaf(positional("PATH"))] PathBuf
+    ),
     /// Clear media files
     #[bpaf(command)]
     Clear,
@@ -265,13 +279,50 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 SetCommand::Screen(args) => apply_screen(&args, &mut keyboard),
                 SetCommand::Image(nearest, path) => {
                     let image = ::image::open(path)?;
+                    // re-encode and upload to keyboard
                     let encoded = encode_image(image, nearest).ok_or("failed to encode image")?;
                     keyboard.upload_image(encoded)?;
                     Ok(())
                 },
-                SetCommand::Gif(path) => {
-                    let gif = std::fs::read(path)?;
-                    keyboard.upload_gif(gif)?;
+                SetCommand::Gif(nearest, path) => {
+                    println!("decoding animation...");
+                    let decoder = image::ImageReader::open(path)?
+                        .with_guessed_format()
+                        .unwrap();
+                    let frames = match decoder.format() {
+                        Some(image::ImageFormat::Gif) => {
+                            // Reset reader and decode gif as an animation
+                            let mut reader = decoder.into_inner();
+                            reader.seek(std::io::SeekFrom::Start(0)).unwrap();
+                            Some(GifDecoder::new(reader)?.into_frames())
+                        },
+                        Some(image::ImageFormat::Png) => {
+                            // Reset reader
+                            let mut reader = decoder.into_inner();
+                            reader.seek(std::io::SeekFrom::Start(0)).unwrap();
+                            let decoder = PngDecoder::new(reader)?;
+                            // If the png contains an apng, decode as an animation
+                            decoder
+                                .is_apng()?
+                                .then_some(decoder.apng().unwrap().into_frames())
+                        },
+                        Some(image::ImageFormat::WebP) => {
+                            // Reset reader
+                            let mut reader = decoder.into_inner();
+                            reader.seek(std::io::SeekFrom::Start(0)).unwrap();
+                            let decoder = WebPDecoder::new(reader).unwrap();
+                            // If the webp contains an animation, decode as an animation
+                            decoder.has_animation().then_some(decoder.into_frames())
+                        },
+                        _ => None,
+                    }
+                    .ok_or("failed to decode animation")?;
+
+                    // re-encode and upload to keyboard
+                    println!("re-encoding gif...");
+                    let encoded = encode_gif(frames, nearest).ok_or("failed to encode gif image")?;
+                    println!("encoded len: {}", encoded.len());
+                    keyboard.upload_gif(encoded)?;
                     Ok(())
                 },
                 SetCommand::Clear => {

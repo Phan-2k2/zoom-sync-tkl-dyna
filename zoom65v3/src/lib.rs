@@ -195,10 +195,6 @@ impl Zoom65v3 {
 
         // start upload
         self.update(commands::ZOOM65_UPLOAD_START_ID, &[channel])?;
-        if image.len() > u16::MAX.into() {
-            return Err(Zoom65Error::ImageTooLarge);
-        }
-
         self.update(
             commands::ZOOM65_UPLOAD_LENGTH,
             &(image.len() as u32).to_be_bytes(),
@@ -224,7 +220,7 @@ impl Zoom65v3 {
 
             // compute checksum
             let mut offset = 3 + 2 + chunk_len;
-            if channel == 2 && i == image.len() / 24 {
+            if channel == 3 && i == image.len() / 24 {
                 buf[2] += 1;
                 offset += 1;
             }
@@ -256,9 +252,12 @@ impl Zoom65v3 {
         self.upload_media(buf, 1)
     }
 
-    /// Upload a gif to the keyboard. Must be 110x110.
+    /// Upload a gif to the keyboard. Must be 111x111.
     #[inline(always)]
     pub fn upload_gif(&mut self, buf: impl AsRef<[u8]>) -> Result<(), Zoom65Error> {
+        if buf.as_ref().len() >= 1013808 {
+            return Err(Zoom65Error::ImageTooLarge)
+        }
         self.upload_media(buf, 2)
     }
 
