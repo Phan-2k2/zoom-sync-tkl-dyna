@@ -1,8 +1,8 @@
 use std::error::Error;
 
-use bpaf::{Bpaf, Parser, construct};
-use zoom65v3::Zoom65v3;
+use bpaf::{construct, Bpaf, Parser};
 use zoom65v3::types::ScreenPosition;
+use zoom65v3::Zoom65v3;
 
 /// Screen options:
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Bpaf)]
@@ -34,8 +34,9 @@ pub fn screen_args_with_reactive() -> impl Parser<ScreenArgs> {
     #[cfg(target_os = "linux")]
     {
         let reactive = bpaf::long("reactive")
+            .help("Enable reactive mode, playing gif when typing and image when resting. Requires root permission for reading keypresses via evdev")
             .req_flag(ScreenArgs::Reactive);
-        construct!([reactive, screen_args()])
+        construct!([reactive, screen_args()]).group_help("Screen options:")
     }
 }
 

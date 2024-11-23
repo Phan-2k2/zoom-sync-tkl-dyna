@@ -19,21 +19,24 @@ tokio = { version = "1.41", features = ["full"] }
 tokio-stream = "0.1.16"
 futures = "0.3.31"
 rayon = "1.10.0"
-bpaf = { version = "0.9", features = ["derive", "dull-color"] }
 either = "1.13"
 
+# cli parsing
+bpaf = { version = "0.9", features = ["derive", "dull-color"] }
+humantime = "2.1.0"
+
+# media utils
+image = "0.25.5" # image reading and operations
+gif = "0.13.1" # gif encoding
+rgb565 = "0.1.3" # image encoding
+
 # data fetching
-chrono.workspace = true # time
-ipinfo = "3.0.1" # geolocation
-open-meteo-api = "0.1.4" # weather
-nvml-wrapper = "0.10.0" # nvidia temp
+chrono.workspace = true # local time
+ipinfo = "3.0.1" # free geolocation api
+open-meteo-api = "0.1.4" # free weather api
+nvml-wrapper = "0.10.0" # nvidia gpu temp
 sysinfo = "0.32.0" # cpu temp
 
-image = "0.25.5" # image reading and operations
-
-gif = "0.13.1"
-rgb565 = "0.1.3" # raw image buffer encoding
-
 [target.'cfg(target_os = "linux")'.dependencies]
-evdev = { version = "0.12.2", features = ["tokio"] } # reading keypress events
+evdev = { version = "0.12.2", features = ["tokio"] } # reading keypress events on linux
 

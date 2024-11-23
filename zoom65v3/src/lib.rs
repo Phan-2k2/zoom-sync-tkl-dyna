@@ -1,6 +1,6 @@
 //! High level hidapi abstraction for interacting with zoom65v3 screen modules
 
-use std::io::{Write, stdout};
+use std::io::{stdout, Write};
 use std::ops::Deref;
 use std::sync::{LazyLock, RwLock};
 
@@ -149,16 +149,19 @@ impl Zoom65v3 {
 
     /// Update the keyboards current time
     pub fn set_time<Tz: TimeZone>(&mut self, time: DateTime<Tz>) -> Result<(), Zoom65Error> {
-        self.update(commands::ZOOM65_SET_TIME_ID, &[
-            // Provide the current year without the century.
-            // This prevents overflows on the year 2256 (meletrix web ui just subtracts 2000)
-            (time.year() % 100) as u8,
-            time.month() as u8,
-            time.day() as u8,
-            time.hour() as u8,
-            time.minute() as u8,
-            time.second() as u8,
-        ])?;
+        self.update(
+            commands::ZOOM65_SET_TIME_ID,
+            &[
+                // Provide the current year without the century.
+                // This prevents overflows on the year 2256 (meletrix web ui just subtracts 2000)
+                (time.year() % 100) as u8,
+                time.month() as u8,
+                time.day() as u8,
+                time.hour() as u8,
+                time.minute() as u8,
+                time.second() as u8,
+            ],
+        )?;
         Ok(())
     }
 
@@ -170,9 +173,10 @@ impl Zoom65v3 {
         low: u8,
         high: u8,
     ) -> Result<(), Zoom65Error> {
-        self.update(commands::ZOOM65_SET_WEATHER_ID, &[
-            icon as u8, current, low, high,
-        ])?;
+        self.update(
+            commands::ZOOM65_SET_WEATHER_ID,
+            &[icon as u8, current, low, high],
+        )?;
         Ok(())
     }
 
@@ -184,9 +188,10 @@ impl Zoom65v3 {
         download_rate: f32,
     ) -> Result<(), Zoom65Error> {
         let bytes = DumbFloat16::new(download_rate).to_bit_repr();
-        self.update(commands::ZOOM65_SET_SYSINFO_ID, &[
-            cpu_temp, gpu_temp, bytes[0], bytes[1],
-        ])?;
+        self.update(
+            commands::ZOOM65_SET_SYSINFO_ID,
+            &[cpu_temp, gpu_temp, bytes[0], bytes[1]],
+        )?;
         Ok(())
     }
 
@@ -262,7 +267,7 @@ impl Zoom65v3 {
     #[inline(always)]
     pub fn upload_gif(&mut self, buf: impl AsRef<[u8]>) -> Result<(), Zoom65Error> {
         if buf.as_ref().len() >= 1013808 {
-            return Err(Zoom65Error::ImageTooLarge)
+            return Err(Zoom65Error::ImageTooLarge);
         }
         self.upload_media(buf, 2)
     }

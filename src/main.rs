@@ -32,7 +32,7 @@ fn farenheit() -> impl Parser<bool> {
         .long("farenheit")
         .help(
             "Use farenheit for all fetched temperatures. \
-May cause clamping for anything greater than 99F.\
+May cause clamping for anything greater than 99F. \
 No effect on any manually provided data.",
         )
         .switch()
@@ -40,15 +40,15 @@ No effect on any manually provided data.",
 
 #[derive(Debug, Clone, Bpaf)]
 struct RefreshArgs {
-    /// Continuously refresh system data at a given interval (in seconds)
-    #[bpaf(short('S'), long, fallback(10), display_fallback)]
-    refresh_system: u64,
-    /// Continuously refresh system data at a given interval (in seconds)
-    #[bpaf(short('W'), long, fallback(60 * 60), display_fallback)]
-    refresh_weather: u64,
+    /// Interval in seconds to refresh system data
+    #[bpaf(short('S'), long, fallback(Duration::from_secs(10).into()), display_fallback)]
+    refresh_system: humantime::Duration,
+    /// Interval in seconds to refresh weather data
+    #[bpaf(short('W'), long, fallback(Duration::from_secs(60 * 60).into()), display_fallback)]
+    refresh_weather: humantime::Duration,
     /// Retry interval for reconnecting to keyboard
-    #[bpaf(short('R'), long, fallback(5), display_fallback)]
-    retry: u64,
+    #[bpaf(short('R'), long, fallback(Duration::from_secs(5).into()), display_fallback)]
+    retry: humantime::Duration,
     #[bpaf(external)]
     farenheit: bool,
     #[bpaf(external(screen_args_with_reactive), optional)]
@@ -88,23 +88,28 @@ enum SetCommand {
     /// Change current screen
     #[bpaf(command, fallback_to_usage)]
     Screen(#[bpaf(external(screen_args))] ScreenArgs),
-    /// Upload image/gif media
+    /// Upload static image
     #[bpaf(command, fallback_to_usage)]
-    Image(
+    Image(#[bpaf(external(set_media_args))] SetMediaArgs),
+    /// Upload animated image (gif/webp/apng)
+    #[bpaf(command, fallback_to_usage)]
+    Gif(#[bpaf(external(set_media_args))] SetMediaArgs),
+    /// Clear all media files
+    #[bpaf(command)]
+    Clear,
+}
+
+#[derive(Clone, Debug, Bpaf)]
+enum SetMediaArgs {
+    Set {
         /// Use nearest neighbor interpolation when resizing, otherwise uses gaussian.
-        #[bpaf(short('n'), long("nearest"))] bool,
+        #[bpaf(short('n'), long("nearest"))]
+        nearest: bool,
         /// Path to image to re-encode and upload
-        #[bpaf(positional("PATH"), guard(|p| p.exists(), "file not found"))] PathBuf,
-    ),
-    /// Upload image/gif media
-    #[bpaf(command, fallback_to_usage)]
-    Gif(
-        /// Use nearest neighbor interpolation when resizing, otherwise uses gaussian.
-        #[bpaf(short('n'), long("nearest"))] bool,
-        /// Path to animation to re-encode and upload
-        #[bpaf(positional("PATH"), guard(|p| p.exists(), "file not found"))] PathBuf
-    ),
-    /// Clear media files
+        #[bpaf(positional("PATH"), guard(|p| p.exists(), "file not found"))]
+        path: PathBuf,
+    },
+    /// Delete the content, resetting back to the default.
     #[bpaf(command)]
     Clear,
 }
@@ -114,7 +119,8 @@ enum SetCommand {
 enum Cli {
     /// Update the keyboard periodically in a loop, reconnecting on errors.
     Run(#[bpaf(external(refresh_args))] RefreshArgs),
-    /// Set specific options on the keyboard
+    /// Set specific options on the keyboard.
+    /// Must not be used while zoom-sync is already running.
     #[bpaf(command, fallback_to_usage)]
     Set {
         #[bpaf(external)]
@@ -144,7 +150,7 @@ async fn refresh(mut args: RefreshArgs) -> Result<(), Box<dyn Error>> {
     loop {
         if let Err(e) = run(&mut args, &mut cpu, &gpu).await {
             eprintln!("error: {e}\nreconnecting in {} seconds...", args.retry);
-            tokio::time::sleep(Duration::from_secs(args.retry)).await;
+            tokio::time::sleep(args.retry.into()).await;
         }
     }
 }
@@ -174,7 +180,6 @@ async fn run(
             println!("set screen");
         }
     }
-
     #[cfg(not(target_os = "linux"))]
     let reactive_stream = None;
     #[cfg(target_os = "linux")]
@@ -207,8 +212,8 @@ async fn run(
     #[cfg(target_os = "linux")]
     let mut is_reactive_running = false;
 
-    let mut weather_interval = tokio::time::interval(Duration::from_secs(args.refresh_weather));
-    let mut system_interval = tokio::time::interval(Duration::from_secs(args.refresh_system));
+    let mut weather_interval = tokio::time::interval(args.refresh_weather.into());
+    let mut system_interval = tokio::time::interval(args.refresh_system.into());
 
     loop {
         tokio::select! {
@@ -276,53 +281,67 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     download,
                 ),
                 SetCommand::Screen(args) => apply_screen(&args, &mut keyboard),
-                SetCommand::Image(nearest, path) => {
-                    let image = ::image::open(path)?;
-                    // re-encode and upload to keyboard
-                    let encoded = encode_image(image, nearest).ok_or("failed to encode image")?;
-                    keyboard.upload_image(encoded)?;
-                    Ok(())
+                SetCommand::Image(args) => match args {
+                    SetMediaArgs::Set { nearest, path } => {
+                        let image = ::image::open(path)?;
+                        // re-encode and upload to keyboard
+                        let encoded =
+                            encode_image(image, nearest).ok_or("failed to encode image")?;
+                        keyboard.upload_image(encoded)?;
+                        Ok(())
+                    },
+                    SetMediaArgs::Clear => {
+                        keyboard.clear_image()?;
+                        Ok(())
+                    },
                 },
-                SetCommand::Gif(nearest, path) => {
-                    print!("decoding animation ... ");
-                    stdout().flush().unwrap();
-                    let decoder = image::ImageReader::open(path)?
-                        .with_guessed_format()
-                        .unwrap();
-                    let frames = match decoder.format() {
-                        Some(image::ImageFormat::Gif) => {
-                            // Reset reader and decode gif as an animation
-                            let mut reader = decoder.into_inner();
-                            reader.seek(std::io::SeekFrom::Start(0)).unwrap();
-                            Some(GifDecoder::new(reader)?.into_frames())
-                        },
-                        Some(image::ImageFormat::Png) => {
-                            // Reset reader
-                            let mut reader = decoder.into_inner();
-                            reader.seek(std::io::SeekFrom::Start(0)).unwrap();
-                            let decoder = PngDecoder::new(reader)?;
-                            // If the png contains an apng, decode as an animation
-                            decoder
-                                .is_apng()?
-                                .then_some(decoder.apng().unwrap().into_frames())
-                        },
-                        Some(image::ImageFormat::WebP) => {
-                            // Reset reader
-                            let mut reader = decoder.into_inner();
-                            reader.seek(std::io::SeekFrom::Start(0)).unwrap();
-                            let decoder = WebPDecoder::new(reader).unwrap();
-                            // If the webp contains an animation, decode as an animation
-                            decoder.has_animation().then_some(decoder.into_frames())
-                        },
-                        _ => None,
-                    }
-                    .ok_or("failed to decode animation")?;
-                    println!("done");
+                SetCommand::Gif(args) => match args {
+                    SetMediaArgs::Set { nearest, path } => {
+                        print!("decoding animation ... ");
+                        stdout().flush().unwrap();
+                        let decoder = image::ImageReader::open(path)?
+                            .with_guessed_format()
+                            .unwrap();
+                        let frames = match decoder.format() {
+                            Some(image::ImageFormat::Gif) => {
+                                // Reset reader and decode gif as an animation
+                                let mut reader = decoder.into_inner();
+                                reader.seek(std::io::SeekFrom::Start(0)).unwrap();
+                                Some(GifDecoder::new(reader)?.into_frames())
+                            },
+                            Some(image::ImageFormat::Png) => {
+                                // Reset reader
+                                let mut reader = decoder.into_inner();
+                                reader.seek(std::io::SeekFrom::Start(0)).unwrap();
+                                let decoder = PngDecoder::new(reader)?;
+                                // If the png contains an apng, decode as an animation
+                                decoder
+                                    .is_apng()?
+                                    .then_some(decoder.apng().unwrap().into_frames())
+                            },
+                            Some(image::ImageFormat::WebP) => {
+                                // Reset reader
+                                let mut reader = decoder.into_inner();
+                                reader.seek(std::io::SeekFrom::Start(0)).unwrap();
+                                let decoder = WebPDecoder::new(reader).unwrap();
+                                // If the webp contains an animation, decode as an animation
+                                decoder.has_animation().then_some(decoder.into_frames())
+                            },
+                            _ => None,
+                        }
+                        .ok_or("failed to decode animation")?;
+                        println!("done");
 
-                    // re-encode and upload to keyboard
-                    let encoded = encode_gif(frames, nearest).ok_or("failed to encode gif image")?;
-                    keyboard.upload_gif(encoded)?;
-                    Ok(())
+                        // re-encode and upload to keyboard
+                        let encoded =
+                            encode_gif(frames, nearest).ok_or("failed to encode gif image")?;
+                        keyboard.upload_gif(encoded)?;
+                        Ok(())
+                    },
+                    SetMediaArgs::Clear => {
+                        keyboard.clear_gif()?;
+                        Ok(())
+                    },
                 },
                 SetCommand::Clear => {
                     keyboard.clear_image()?;
