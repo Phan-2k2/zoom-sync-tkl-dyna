@@ -1,7 +1,7 @@
 //! Main cli binary
 
 use std::error::Error;
-use std::io::Seek;
+use std::io::{stdout, Seek, Write};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -94,7 +94,7 @@ enum SetCommand {
         /// Use nearest neighbor interpolation when resizing, otherwise uses gaussian.
         #[bpaf(short('n'), long("nearest"))] bool,
         /// Path to image to re-encode and upload
-        #[bpaf(positional("PATH"))] PathBuf,
+        #[bpaf(positional("PATH"), guard(|p| p.exists(), "file not found"))] PathBuf,
     ),
     /// Upload image/gif media
     #[bpaf(command, fallback_to_usage)]
@@ -102,7 +102,7 @@ enum SetCommand {
         /// Use nearest neighbor interpolation when resizing, otherwise uses gaussian.
         #[bpaf(short('n'), long("nearest"))] bool,
         /// Path to animation to re-encode and upload
-        #[bpaf(positional("PATH"))] PathBuf
+        #[bpaf(positional("PATH"), guard(|p| p.exists(), "file not found"))] PathBuf
     ),
     /// Clear media files
     #[bpaf(command)]
@@ -284,7 +284,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     Ok(())
                 },
                 SetCommand::Gif(nearest, path) => {
-                    println!("decoding animation...");
+                    print!("decoding animation ... ");
+                    stdout().flush().unwrap();
                     let decoder = image::ImageReader::open(path)?
                         .with_guessed_format()
                         .unwrap();
@@ -316,16 +317,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         _ => None,
                     }
                     .ok_or("failed to decode animation")?;
+                    println!("done");
 
                     // re-encode and upload to keyboard
                     let encoded = encode_gif(frames, nearest).ok_or("failed to encode gif image")?;
-                    println!("encoded {} bytes", encoded.len());
                     keyboard.upload_gif(encoded)?;
                     Ok(())
                 },
                 SetCommand::Clear => {
                     keyboard.clear_image()?;
                     keyboard.clear_gif()?;
+                    println!("cleared media");
                     Ok(())
                 },
             }

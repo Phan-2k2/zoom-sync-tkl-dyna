@@ -8,6 +8,8 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 /// Encode an square image as rgb565 with an 8 bit alpha channel
 pub fn encode_image(image: DynamicImage, nearest: bool) -> Option<Vec<u8>> {
+    print!("resizing and encoding image ... ");
+    stdout().flush().unwrap();
     let buf = image
         .resize_to_fill(
             110,
@@ -37,6 +39,7 @@ pub fn encode_image(image: DynamicImage, nearest: bool) -> Option<Vec<u8>> {
         })
         .collect::<Vec<_>>();
     debug_assert_eq!(buf.len(), 110 * 110 * 3);
+    println!("done");
     Some(buf)
 }
 
@@ -54,12 +57,11 @@ pub fn encode_gif(frames: Frames, nearest: bool) -> Option<Vec<u8>> {
             frame.make_lzw_pre_encoded();
             frame.needs_user_input = true;
             let i = completed.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            print!("\rre-encoding frame ({i}/{len}) ...");
+            print!("\rre-encoding frames ({i}/{len}) ... ");
             stdout().flush().unwrap();
             frame
         })
         .collect::<Vec<_>>();
-    println!();
 
     let mut buf = Vec::new();
     {
@@ -68,8 +70,8 @@ pub fn encode_gif(frames: Frames, nearest: bool) -> Option<Vec<u8>> {
         for frame in new_frames {
             encoder.write_lzw_pre_encoded_frame(&frame).ok()?;
         }
-
     }
+    println!("done");
     Some(buf)
 }
 

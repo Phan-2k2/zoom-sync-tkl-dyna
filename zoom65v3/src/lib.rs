@@ -200,10 +200,11 @@ impl Zoom65v3 {
             &(image.len() as u32).to_be_bytes(),
         )?;
 
-        let total = image.len() / 24;
+        let len = image.len();
+        let total = len / 24;
         let width = total.to_string().len();
         for (i, chunk) in image.chunks(24).enumerate() {
-            print!("\ruploading ({i:width$}/{total}) ...");
+            print!("\ruploading {len} bytes ({i:width$}/{total}) ... ");
             stdout().flush().unwrap();
 
             let chunk_len = chunk.len();
@@ -245,6 +246,8 @@ impl Zoom65v3 {
         self.update(commands::ZOOM65_UPLOAD_END, &[1])?;
         // TODO: is this required?
         self.reset_screen()?;
+
+        println!("done");
 
         Ok(())
     }
