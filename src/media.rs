@@ -1,8 +1,10 @@
 use std::cmp::max;
+use std::io::{stdout, Write};
+use std::sync::atomic::AtomicU16;
 
-use image::codecs::gif::GifEncoder;
 use image::imageops::FilterType;
-use image::{imageops, DynamicImage, Frame, Frames, GenericImageView, ImageBuffer, Pixel};
+use image::{imageops, DynamicImage, Frames, GenericImageView, ImageBuffer, Pixel};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 /// Encode an square image as rgb565 with an 8 bit alpha channel
 pub fn encode_image(image: DynamicImage, nearest: bool) -> Option<Vec<u8>> {
@@ -40,20 +42,33 @@ pub fn encode_image(image: DynamicImage, nearest: bool) -> Option<Vec<u8>> {
 
 /// Re-encode animation frames as a 111x111 gif
 pub fn encode_gif(frames: Frames, nearest: bool) -> Option<Vec<u8>> {
+    let frames = frames.collect_frames().ok()?;
+    let len = frames.len();
+
+    let completed = AtomicU16::new(1);
     let new_frames = frames
-        .into_iter()
-        .map(|res| {
-            let frame = res.expect("failed to decode frame");
+        .par_iter()
+        .map(|frame| {
             let new = resize_to_fill(frame.buffer(), 111, 111, nearest);
-            Frame::from_parts(new, 0, 0, frame.delay())
+            let mut frame = gif::Frame::from_rgba(111, 111, &mut new.into_vec());
+            frame.make_lzw_pre_encoded();
+            frame.needs_user_input = true;
+            let i = completed.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            print!("\rre-encoding frame ({i}/{len}) ...");
+            stdout().flush().unwrap();
+            frame
         })
         .collect::<Vec<_>>();
+    println!();
 
     let mut buf = Vec::new();
     {
-        let mut encoder = GifEncoder::new(&mut buf);
-        encoder.set_repeat(image::codecs::gif::Repeat::Infinite).ok()?;
-        encoder.encode_frames(new_frames).ok()?;
+        let mut encoder = gif::Encoder::new(&mut buf, 111, 111, &[]).ok()?;
+        encoder.set_repeat(gif::Repeat::Infinite).ok()?;
+        for frame in new_frames {
+            encoder.write_lzw_pre_encoded_frame(&frame).ok()?;
+        }
+
     }
     Some(buf)
 }
