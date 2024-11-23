@@ -202,7 +202,7 @@ impl Zoom65v3 {
 
         let total = image.len() / 24;
         for (i, chunk) in image.chunks(24).enumerate() {
-            print!("\r{i:3}/{total}");
+            print!("\ruploading ({i:3}/{total}) ...");
             stdout().flush().unwrap();
 
             let chunk_len = chunk.len();
@@ -220,9 +220,11 @@ impl Zoom65v3 {
 
             // compute checksum
             let mut offset = 3 + 2 + chunk_len;
-            if channel == 3 && i == image.len() / 24 {
-                buf[2] += 1;
-                offset += 1;
+            if channel == 2 && i == image.len() / 24 {
+                // compute padding for final payload, the checksum needs 32-bit alignment
+                let padding = (4 - (image.len() % 24) % 4) % 4;
+                buf[2] += padding as u8;
+                offset += padding;
             }
             let data = &buf[3..offset + 2];
             let crc = checksum(data);
