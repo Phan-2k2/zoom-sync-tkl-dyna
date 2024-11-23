@@ -201,8 +201,9 @@ impl Zoom65v3 {
         )?;
 
         let total = image.len() / 24;
+        let width = total.to_string().len();
         for (i, chunk) in image.chunks(24).enumerate() {
-            print!("\ruploading ({i:3}/{total}) ...");
+            print!("\ruploading ({i:width$}/{total}) ...");
             stdout().flush().unwrap();
 
             let chunk_len = chunk.len();

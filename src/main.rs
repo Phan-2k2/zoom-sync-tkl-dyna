@@ -3,7 +3,6 @@
 use std::error::Error;
 use std::io::Seek;
 use std::path::PathBuf;
-use std::process::exit;
 use std::time::Duration;
 
 use bpaf::{Bpaf, Parser};
@@ -240,7 +239,7 @@ async fn run(
                     // timeout, reset back to image
                     Err(_) if is_reactive_running => {
                         is_reactive_running = false;
-                        keyboard.screen_switch()?;
+                        keyboard.reset_screen()?;
                         keyboard.screen_switch()?;
                         keyboard.screen_switch()?;
                     },
@@ -319,9 +318,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     .ok_or("failed to decode animation")?;
 
                     // re-encode and upload to keyboard
-                    println!("re-encoding gif...");
                     let encoded = encode_gif(frames, nearest).ok_or("failed to encode gif image")?;
-                    println!("encoded len: {}", encoded.len());
+                    println!("encoded {} bytes", encoded.len());
                     keyboard.upload_gif(encoded)?;
                     Ok(())
                 },
