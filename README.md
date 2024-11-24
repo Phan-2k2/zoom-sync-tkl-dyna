@@ -31,16 +31,23 @@ The following free third-party services are used to fetch some information:
 
 ## Installation
 
-### Source
-
 Requirements:
 
 - libudev (linux, included with systemd)
 - openssl
+- rust/rustup
+
+### Source
 
 ```bash
 git clone https://github.com/ozwaldorf/zoom-sync && cd zoom-sync
 cargo install --path .
+```
+
+### Crates.io
+
+```bash
+cargo install zoom-sync
 ```
 
 ### Nix
