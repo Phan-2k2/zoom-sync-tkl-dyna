@@ -1,8 +1,11 @@
 [package]
 name = "zoom65v3"
-version = "0.1.0"
+version = "0.1.1"
 description = "Reverse engineered hidapi bindings to zoom65v3 screen modules"
-edition = "2021"
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 thiserror = "2.0"

@@ -2,17 +2,26 @@
 name = "zoom-sync"
 version = "0.1.0"
 description = "Cross-platform utility for syncing zoom65v3 screen modules"
-edition = "2021"
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [workspace]
 members = ["zoom65v3"]
+
+[workspace.package]
+repository = "https://github.com/ozwaldorf/zoom-sync"
+homepage = "https://github.com/ozwaldorf/zoom-sync"
+license = "MIT"
+edition = "2021"
 
 [workspace.dependencies]
 chrono = "0.4.38" # local time
 
 [dependencies]
 # keyboard management
-zoom65v3 = { path = "./zoom65v3", version = "0.1.0" }
+zoom65v3 = { path = "./zoom65v3", version = "0.1" }
 
 # runtime and scaffalding
 tokio = { version = "1.41", features = ["full"] }
