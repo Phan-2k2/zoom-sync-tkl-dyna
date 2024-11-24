@@ -140,7 +140,7 @@ zoom-sync set weather -w 0 10 20 5
 - [x] Simulate reactive gif mode (linux)
 - [ ] System tray menu
 - [ ] Package releases
-  - [ ] Crates.io
+  - [x] Crates.io
   - [ ] Nixpkgs
   - [ ] Windows
   - [ ] OSX
