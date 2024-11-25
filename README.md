@@ -84,7 +84,12 @@ sudo systemctl enable --now zoom-sync.service
 
 #### Windows
 
-> TODO
+1. Locate the zoom-sync.exe file depending on the installation and open in the file manager (
+   - From source or crates.io: Press Windows + R (Run) and enter `%userprofile%\.cargo\bin`
+2. Create a new shortcut to zoom-sync
+3. Edit shortcut (right click -> properties) and add any configuration arguments to the `target` after `zoom-sync.exe`
+4. Press Windows + R (Run) and type `shell:startup`
+5. Move the newly created shortcut to the opened startup applications folder to have zoom-sync run automatically on boot
 
 #### OSX
 
