@@ -1,6 +1,6 @@
 [package]
 name = "zoom-sync"
-version = "0.1.1"
+version = "0.1.2"
 description = "Cross-platform utility for syncing zoom65v3 screen modules"
 repository = "https://github.com/ozwaldorf/zoom-sync"
 authors = [ "ozwaldorf <self@ossian.dev>" ]
@@ -15,7 +15,7 @@ chrono = "0.4.38" # local time
 
 [dependencies]
 # keyboard management
-zoom65v3 = { path = "./zoom65v3", version = "0.1" }
+zoom65v3 = { path = "./zoom65v3", version = "0.2" }
 
 # runtime and scaffalding
 tokio = { version = "1.41", features = ["full"] }

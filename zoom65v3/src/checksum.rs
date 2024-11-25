@@ -1,4 +1,4 @@
-/// Checksum function used during image upload
+/// Checksum function used for media uploads
 pub fn checksum(data: &[u8]) -> [u8; 4] {
     const A: isize = 4294967295;
     let mut val = A;
@@ -21,6 +21,7 @@ pub fn checksum(data: &[u8]) -> [u8; 4] {
     ]
 }
 
+#[cfg(test)]
 #[test]
 fn checksum_test() {
     assert_eq!(
@@ -29,6 +30,6 @@ fn checksum_test() {
             0, 0, 0,
         ]),
         [94, 148, 189, 206],
-        "checksum should be the same as input data"
+        "checksum should be the same as test data"
     );
 }

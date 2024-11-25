@@ -1,5 +1,3 @@
-//! Main cli binary
-
 use std::error::Error;
 use std::io::{stdout, Seek, Write};
 use std::path::PathBuf;
@@ -12,12 +10,11 @@ use image::codecs::gif::GifDecoder;
 use image::codecs::png::PngDecoder;
 use image::codecs::webp::WebPDecoder;
 use image::AnimationDecoder;
-use media::encode_gif;
 use tokio_stream::StreamExt;
 use zoom65v3::Zoom65v3;
 
 use crate::info::{apply_system, cpu_mode, gpu_mode, system_args, CpuMode, GpuMode, SystemArgs};
-use crate::media::encode_image;
+use crate::media::{encode_gif, encode_image};
 use crate::screen::{apply_screen, screen_args, screen_args_with_reactive, ScreenArgs};
 use crate::weather::{apply_weather, weather_args, WeatherArgs};
 
@@ -294,7 +291,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         // re-encode and upload to keyboard
                         let encoded =
                             encode_image(image, nearest).ok_or("failed to encode image")?;
-                        keyboard.upload_image(encoded)?;
+                        let len = encoded.len();
+                        let total = len / 24;
+                        let width = total.to_string().len();
+                        keyboard.upload_image(encoded, |i| {
+                            print!("\ruploading {len} bytes ({i:width$}/{total}) ... ");
+                            stdout().flush().unwrap();
+                        })?;
                         Ok(())
                     },
                     SetMediaArgs::Clear => {
@@ -342,7 +345,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         // re-encode and upload to keyboard
                         let encoded =
                             encode_gif(frames, nearest).ok_or("failed to encode gif image")?;
-                        keyboard.upload_gif(encoded)?;
+                        let len = encoded.len();
+                        let total = len / 24;
+                        let width = total.to_string().len();
+                        keyboard.upload_gif(encoded, |i| {
+                            print!("\ruploading {len} bytes ({i:width$}/{total}) ... ");
+                            stdout().flush().unwrap();
+                        })?;
                         Ok(())
                     },
                     SetMediaArgs::Clear => {

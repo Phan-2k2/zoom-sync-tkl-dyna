@@ -2,16 +2,22 @@ use std::str::FromStr;
 
 use hidapi::HidError;
 
+use crate::abi::Arg;
+
+pub type Zoom65Result<T> = Result<T, Zoom65Error>;
+
 #[derive(thiserror::Error)]
 pub enum Zoom65Error {
     #[error("failed to find device")]
     DeviceNotFound,
     #[error("firmware version is unknown. open an issue for support")]
     UnknownFirmwareVersion,
-    #[error("keyboard responded with error while updating, byte 1 == 88 && byte 2 == 0")]
+    #[error("keyboard responded with error while updating")]
     UpdateCommandFailed,
-    #[error("the provided image was too large")]
-    ImageTooLarge,
+    #[error("the provided image was the invalid (must be rgb565 with 0xff alpha channel)")]
+    InvalidImage,
+    #[error("the provided gif was too large")]
+    GifTooLarge,
     #[error("{_0}")]
     Hid(#[from] HidError),
 }
@@ -19,6 +25,36 @@ pub enum Zoom65Error {
 impl std::fmt::Debug for Zoom65Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{self}")
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ScreenTheme {
+    #[default]
+    Blue = 1,
+    Pink = 2,
+}
+
+impl Arg for ScreenTheme {
+    const SIZE: usize = 1;
+    fn to_bytes(&self) -> Vec<u8> {
+        vec![*self as u8]
+    }
+}
+
+/// Channel to start uploading to
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum UploadChannel {
+    Image = 1,
+    Gif = 2,
+}
+
+impl Arg for UploadChannel {
+    const SIZE: usize = 1;
+    #[inline(always)]
+    fn to_bytes(&self) -> Vec<u8> {
+        vec![*self as u8]
     }
 }
 
@@ -76,6 +112,14 @@ impl Icon {
             // unknown
             _ => None
         }
+    }
+}
+
+impl Arg for Icon {
+    const SIZE: usize = 1;
+    #[inline(always)]
+    fn to_bytes(&self) -> Vec<u8> {
+        vec![self.clone() as u8]
     }
 }
 

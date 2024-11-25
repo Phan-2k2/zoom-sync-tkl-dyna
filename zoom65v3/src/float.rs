@@ -1,6 +1,8 @@
 use std::fmt::Debug;
 use std::ops::Not;
 
+use crate::abi::Arg;
+
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DumbFloat16(u16);
 
@@ -78,6 +80,14 @@ impl TryFrom<f32> for DumbFloat16 {
 impl Debug for DumbFloat16 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("BadFloat16").field(&f32::from(self)).finish()
+    }
+}
+
+impl Arg for DumbFloat16 {
+    const SIZE: usize = 2;
+    #[inline(always)]
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_bit_repr().to_vec()
     }
 }
 
