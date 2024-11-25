@@ -31,11 +31,13 @@ The following free third-party services are used to fetch some information:
 
 ## Installation
 
-Requirements:
+> See the [latest release notes](https://github.com/ozwaldorf/zoom-sync/releases/latest) for pre-built windows and linux binaries
 
-- libudev (linux, included with systemd)
-- openssl
+Build requirements:
+
 - rust/rustup
+- openssl
+- libudev (linux only, included with systemd)
 
 ### Source
 
