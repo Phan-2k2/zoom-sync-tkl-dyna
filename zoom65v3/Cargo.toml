@@ -1,11 +1,11 @@
 [package]
 name = "zoom65v3"
-version = "0.1.1"
+version = "0.1.2"
 description = "Reverse engineered hidapi bindings to zoom65v3 screen modules"
-repository.workspace = true
-homepage.workspace = true
-license.workspace = true
-edition.workspace = true
+repository = "https://github.com/ozwaldorf/zoom-sync"
+authors = [ "ozwaldorf <self@ossian.dev>" ]
+license = "MIT"
+edition = "2021"
 
 [dependencies]
 thiserror = "2.0"
