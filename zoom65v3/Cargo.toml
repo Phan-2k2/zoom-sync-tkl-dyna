@@ -9,5 +9,5 @@ edition.workspace = true
 
 [dependencies]
 thiserror = "2.0"
-hidapi = "2.6"
+hidapi = { version = "2.6", features = ["windows-native"] }
 chrono.workspace = true

@@ -7,7 +7,6 @@ use std::time::Duration;
 
 use bpaf::{Bpaf, Parser};
 use either::Either;
-use evdev::InputEventKind;
 use futures::future::OptionFuture;
 use image::codecs::gif::GifDecoder;
 use image::codecs::png::PngDecoder;
@@ -181,9 +180,15 @@ async fn run(
         }
     }
     #[cfg(not(target_os = "linux"))]
-    let reactive_stream = None;
+    let mut reactive_stream: Option<
+        Box<
+            dyn tokio_stream::Stream<Item = Result<Result<(), std::io::Error>, Box<dyn Error>>>
+                + Unpin,
+        >,
+    > = None;
     #[cfg(target_os = "linux")]
     let mut reactive_stream = args.screen_args.and_then(|args| match args {
+        #[cfg(target_os = "linux")]
         ScreenArgs::Reactive => {
             println!("initializing reactive mode");
             keyboard
@@ -209,7 +214,6 @@ async fn run(
         },
         _ => None,
     });
-    #[cfg(target_os = "linux")]
     let mut is_reactive_running = false;
 
     let mut weather_interval = tokio::time::interval(args.refresh_weather.into());
@@ -231,12 +235,15 @@ async fn run(
                     )?;
                 }
             },
-            Some(Some(res)) = OptionFuture::from(reactive_stream.as_mut().map(|s| s.next())) => {
+            Some(Some(res)) = {
+        OptionFuture::from(reactive_stream.as_mut().map(|s| s.next()))
+        } => {
                 match res {
                     Ok(Err(e)) => return Err(Box::new(e)),
                     // keypress, play gif if not already running
+                    #[cfg(target_os = "linux")]
                     Ok(Ok(ev)) if !is_reactive_running => {
-                        if matches!(ev.kind(), InputEventKind::Key(_)) {
+                        if matches!(ev.kind(), evdev::InputEventKind::Key(_)) {
                             is_reactive_running = true;
                             keyboard.screen_switch()?;
                         }
