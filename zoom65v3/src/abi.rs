@@ -34,8 +34,7 @@ macro_rules! impl_command_abi {
                 buf[0] = 0x0;
                 buf[1] = 88;
                 buf[2] = len as u8;
-                buf[3..6].copy_from_slice(&[$($($hardcode),*)?]);
-                let mut cur = 6;
+                let mut cur = 3;
                 $($(
                     buf[cur] = $hardcode;
                     cur += 1;

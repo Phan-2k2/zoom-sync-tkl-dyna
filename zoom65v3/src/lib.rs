@@ -249,8 +249,6 @@ impl Zoom65v3 {
         // TODO: is this required?
         self.reset_screen()?;
 
-        println!("done");
-
         Ok(())
     }
 

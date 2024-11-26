@@ -352,6 +352,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             print!("\ruploading {len} bytes ({i:width$}/{total}) ... ");
                             stdout().flush().unwrap();
                         })?;
+                        println!("done");
                         Ok(())
                     },
                     SetMediaArgs::Clear => {
