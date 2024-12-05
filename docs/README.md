@@ -247,7 +247,7 @@ Change current screen
 
 Upload static image
 
-**Usage**: **`zoom-sync`** **`set`** **`image`** (\[**`-n`**\] _`PATH`_ | _`COMMAND ...`_)
+**Usage**: **`zoom-sync`** **`set`** **`image`** (\[**`-n`**\] \[**`-b`**=_`ARG`_\] _`PATH`_ | _`COMMAND ...`_)
 
 **Available positional items:**
 - _`PATH`_ &mdash; 
@@ -257,7 +257,11 @@ Upload static image
 
 **Available options:**
 - **`-n`**, **`--nearest`** &mdash; 
-  Use nearest neighbor interpolation when resizing, otherwise uses gaussian.
+  Use nearest neighbor interpolation when resizing, otherwise uses gaussian
+- **`-b`**, **`--bg`**=_`ARG`_ &mdash; 
+  Optional background color for transparent images
+   
+  [default: #000000]
 - **`-h`**, **`--help`** &mdash; 
   Prints help information
 
@@ -283,7 +287,7 @@ Delete the content, resetting back to the default.
 
 Upload animated image (gif/webp/apng)
 
-**Usage**: **`zoom-sync`** **`set`** **`gif`** (\[**`-n`**\] _`PATH`_ | _`COMMAND ...`_)
+**Usage**: **`zoom-sync`** **`set`** **`gif`** (\[**`-n`**\] \[**`-b`**=_`ARG`_\] _`PATH`_ | _`COMMAND ...`_)
 
 **Available positional items:**
 - _`PATH`_ &mdash; 
@@ -293,7 +297,11 @@ Upload animated image (gif/webp/apng)
 
 **Available options:**
 - **`-n`**, **`--nearest`** &mdash; 
-  Use nearest neighbor interpolation when resizing, otherwise uses gaussian.
+  Use nearest neighbor interpolation when resizing, otherwise uses gaussian
+- **`-b`**, **`--bg`**=_`ARG`_ &mdash; 
+  Optional background color for transparent images
+   
+  [default: #000000]
 - **`-h`**, **`--help`** &mdash; 
   Prints help information
 

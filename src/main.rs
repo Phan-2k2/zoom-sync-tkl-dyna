@@ -1,6 +1,8 @@
 use std::error::Error;
+use std::fmt::{Debug, Display};
 use std::io::{stdout, Seek, Write};
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::time::Duration;
 
 use bpaf::{Bpaf, Parser};
@@ -98,9 +100,17 @@ enum SetCommand {
 #[derive(Clone, Debug, Bpaf)]
 enum SetMediaArgs {
     Set {
-        /// Use nearest neighbor interpolation when resizing, otherwise uses gaussian.
+        /// Use nearest neighbor interpolation when resizing, otherwise uses gaussian
         #[bpaf(short('n'), long("nearest"))]
         nearest: bool,
+        /// Optional background color for transparent images
+        #[bpaf(
+            short,
+            long,
+            fallback(Color([0; 3])),
+            display_fallback,
+        )]
+        bg: Color,
         /// Path to image to re-encode and upload
         #[bpaf(positional("PATH"), guard(|p| p.exists(), "file not found"))]
         path: PathBuf,
@@ -108,6 +118,39 @@ enum SetMediaArgs {
     /// Delete the content, resetting back to the default.
     #[bpaf(command)]
     Clear,
+}
+
+/// Utility for easily parsing hex colors from bpaf
+#[derive(Debug, Clone, Hash)]
+struct Color(pub [u8; 3]);
+impl Display for Color {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let [r, g, b] = self.0;
+        f.write_str(&format!("#{r:02x}{g:02x}{b:02x}"))
+    }
+}
+impl FromStr for Color {
+    type Err = String;
+    fn from_str(code: &str) -> Result<Self, Self::Err> {
+        // parse hex string into rgb
+        let mut hex = (*code).trim_start_matches('#').to_string();
+        match hex.len() {
+            3 => {
+                // Extend 3 character hex colors
+                hex = hex.chars().flat_map(|a| [a, a]).collect();
+            },
+            6 => {},
+            l => return Err(format!("Invalid hex length for {code}: {l}")),
+        }
+        if let Ok(channel_bytes) = u32::from_str_radix(&hex, 16) {
+            let r = ((channel_bytes >> 16) & 0xFF) as u8;
+            let g = ((channel_bytes >> 8) & 0xFF) as u8;
+            let b = (channel_bytes & 0xFF) as u8;
+            Ok(Self([r, g, b]))
+        } else {
+            Err(format!("Invalid hex color: {code}"))
+        }
+    }
 }
 
 #[derive(Clone, Debug, Bpaf)]
@@ -286,11 +329,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 ),
                 SetCommand::Screen(args) => apply_screen(&args, &mut keyboard),
                 SetCommand::Image(args) => match args {
-                    SetMediaArgs::Set { nearest, path } => {
+                    SetMediaArgs::Set { nearest, path, bg } => {
                         let image = ::image::open(path)?;
                         // re-encode and upload to keyboard
                         let encoded =
-                            encode_image(image, nearest).ok_or("failed to encode image")?;
+                            encode_image(image, bg.0, nearest).ok_or("failed to encode image")?;
                         let len = encoded.len();
                         let total = len / 24;
                         let width = total.to_string().len();
@@ -306,7 +349,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     },
                 },
                 SetCommand::Gif(args) => match args {
-                    SetMediaArgs::Set { nearest, path } => {
+                    SetMediaArgs::Set { nearest, path, bg } => {
                         print!("decoding animation ... ");
                         stdout().flush().unwrap();
                         let decoder = image::ImageReader::open(path)?
@@ -343,8 +386,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         println!("done");
 
                         // re-encode and upload to keyboard
-                        let encoded =
-                            encode_gif(frames, nearest).ok_or("failed to encode gif image")?;
+                        let encoded = encode_gif(frames, bg.0, nearest)
+                            .ok_or("failed to encode gif image")?;
                         let len = encoded.len();
                         let total = len / 24;
                         let width = total.to_string().len();
