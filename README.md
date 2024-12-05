@@ -4,21 +4,24 @@ Cross-platform utility to sync Zoom65 v3 screen modules.
 
 ## Features
 
+> Note: All features marked "simulated" are not supported by the screen firmware natively, but rather achieved by the zoom-sync process.
+
 |                     | zoom-sync              | MeletrixID / WuqueID            |
 | ------------------- | ---------------------- | ------------------------------- |
 | Supported platforms | Cross-platform         | Windows, OSX                    |
 | FOSS ?              | FOSS. Always.          | Free, but not open sourced      |
 | Languages           | English                | Chinese or English              |
-| Weather api         | [open-meteo](https://open-meteo.com) | Unknown centralized service |
-| Geolocation api     | [ipinfo](https://ipinfo.io) or manual | Bundled into weather api |
-| VPN workaround      | Manual geo coordinates | Not supported                     |
-| Temperature units   | °C or °F               | °C only                         |
+| Weather API         | [open-meteo](https://open-meteo.com) | Unknown centralized service |
+| Geolocation API     | [ipinfo](https://ipinfo.io) or manual | Bundled into weather api |
+| VPN workaround      | Manual geo coordinates | Not supported                   |
+| Temperature units   | °C or simulated °F     | °C only                         |
 | Time sync           | Supported              | Supported                       |
+| 12hr time           | Simulated              | Not supported                   |
 | CPU temperature     | Supported              | Supported                       |
 | GPU temperature     | Nvidia only            | Supported                       |
 | Download rate       | Manual only            | Supported                       |
 | Manually set data   | Supported              | Not supported                   |
-| Image/gif upload    | Supported              | Not supported (use web driver)  |
+| Image/gif upload    | Supported w/ custom bg | Not supported (use web driver)  |
 | Reactive image/gif  | Simulated              | Not supported                   |
 | Future-proof        | Will always work       | Overflow errors after year 2255 |
 
