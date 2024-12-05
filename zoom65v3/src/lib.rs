@@ -143,16 +143,17 @@ impl Zoom65v3 {
         Ok(())
     }
 
-    /// Update the keyboards current time
+    /// Update the keyboards current time.
+    /// If 12hr is true, hardcodes the time to 01:00-12:00 for the current day.
     #[inline(always)]
-    pub fn set_time<Tz: TimeZone>(&mut self, time: DateTime<Tz>) -> Zoom65Result<()> {
+    pub fn set_time<Tz: TimeZone>(&mut self, time: DateTime<Tz>, _12hr: bool) -> Zoom65Result<()> {
         let res = self.execute(abi::set_time(
             // Provide the current year without the century.
             // This prevents overflows on the year 2256 (meletrix web ui just subtracts 2000)
             (time.year() % 100) as u8,
             time.month() as u8,
             time.day() as u8,
-            time.hour() as u8,
+            if _12hr { time.hour12().1 } else { time.hour() } as u8,
             time.minute() as u8,
             time.second() as u8,
         ))?;

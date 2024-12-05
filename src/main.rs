@@ -6,6 +6,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use bpaf::{Bpaf, Parser};
+use chrono::{DurationRound, TimeDelta};
 use either::Either;
 use futures::future::OptionFuture;
 use image::codecs::gif::GifDecoder;
@@ -47,6 +48,9 @@ struct RefreshArgs {
     /// Retry interval for reconnecting to keyboard
     #[bpaf(short('R'), long, fallback(Duration::from_secs(5).into()), display_fallback)]
     retry: humantime::Duration,
+    /// Enable simulating 12hr time
+    #[bpaf(long("12hr"), fallback(false), display_fallback)]
+    _12hr: bool,
     #[bpaf(external)]
     farenheit: bool,
     #[bpaf(external(screen_args_with_reactive), optional)]
@@ -167,10 +171,10 @@ enum Cli {
     },
 }
 
-pub fn apply_time(keyboard: &mut Zoom65v3) -> Result<(), Box<dyn Error>> {
+pub fn apply_time(keyboard: &mut Zoom65v3, _12hr: bool) -> Result<(), Box<dyn Error>> {
     let time = chrono::Local::now();
     keyboard
-        .set_time(time)
+        .set_time(time, _12hr)
         .map_err(|e| format!("failed to set time: {e}"))?;
     println!("updated time to {time}");
     Ok(())
@@ -204,8 +208,6 @@ async fn run(
         .get_version()
         .map_err(|e| format!("failed to get keyboard version: {e}"))?;
     println!("connected to keyboard version {version}");
-
-    apply_time(&mut keyboard)?;
 
     if let Some(ref args) = args.screen_args {
         #[cfg(not(target_os = "linux"))]
@@ -256,11 +258,31 @@ async fn run(
     });
     let mut is_reactive_running = false;
 
+    // Sync time immediately, and if 12hr time is enabled, resync every next hour
+    apply_time(&mut keyboard, args._12hr)?;
+    let mut time_interval = args._12hr.then_some({
+        let now = chrono::Local::now();
+
+        let delay = now
+            .duration_trunc(TimeDelta::try_minutes(60).unwrap())
+            .unwrap()
+            .timestamp_millis()
+            + 100
+            - now.timestamp_millis();
+
+        tokio::time::interval_at(
+            tokio::time::Instant::now() + Duration::from_millis(delay as u64),
+            Duration::from_secs(60 * 60),
+        )
+    });
     let mut weather_interval = tokio::time::interval(args.refresh_weather.into());
     let mut system_interval = tokio::time::interval(args.refresh_system.into());
 
     loop {
         tokio::select! {
+            Some(_) = OptionFuture::from(time_interval.as_mut().map(|i| i.tick())) => {
+                apply_time(&mut keyboard, args._12hr)?;
+            },
             _ = weather_interval.tick() => {
                 apply_weather(&mut keyboard, &mut args.weather_args, args.farenheit).await?
             },
@@ -276,8 +298,8 @@ async fn run(
                 }
             },
             Some(Some(res)) = {
-        OptionFuture::from(reactive_stream.as_mut().map(|s| s.next()))
-        } => {
+                OptionFuture::from(reactive_stream.as_mut().map(|s| s.next()))
+            } => {
                 match res {
                     Ok(Err(e)) => return Err(Box::new(e)),
                     // keypress, play gif if not already running
@@ -310,7 +332,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Cli::Set { set_command } => {
             let mut keyboard = Zoom65v3::open()?;
             match set_command {
-                SetCommand::Time => apply_time(&mut keyboard),
+                SetCommand::Time => apply_time(&mut keyboard, false),
                 SetCommand::Weather {
                     farenheit,
                     mut weather_args,
