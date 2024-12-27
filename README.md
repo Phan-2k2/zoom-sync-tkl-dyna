@@ -34,7 +34,7 @@ The following free third-party services are used to fetch some information:
 
 ## Installation
 
-> See the [latest release notes](https://github.com/ozwaldorf/zoom-sync/releases/latest) for pre-built windows and linux binaries
+> See the [latest release notes](https://github.com/ozboar/zoom-sync/releases/latest) for pre-built windows and linux binaries
 
 Build requirements:
 
