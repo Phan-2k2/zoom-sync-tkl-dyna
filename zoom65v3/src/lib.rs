@@ -12,9 +12,15 @@ use crate::types::{Icon, Zoom65Error};
 
 pub mod abi;
 pub mod checksum;
-pub mod consts;
 pub mod float;
 pub mod types;
+
+pub mod consts {
+    pub const ZOOM65_VENDOR_ID: u16 = 0x36B5;
+    pub const ZOOM65_PRODUCT_ID: u16 = 0x287F;
+    pub const ZOOM65_USAGE_PAGE: u16 = 65376;
+    pub const ZOOM65_USAGE: u16 = 97;
+}
 
 /// Lazy handle to hidapi
 static API: LazyLock<RwLock<HidApi>> =
@@ -31,7 +37,7 @@ impl Zoom65v3 {
     pub fn open() -> Result<Self, Zoom65Error> {
         API.write().unwrap().refresh_devices()?;
         let api = API.read().unwrap();
-        let mut this = Self {
+        let this = Self {
             device: api
                 .device_list()
                 .find(|d| {
@@ -45,9 +51,6 @@ impl Zoom65v3 {
             buf: [0u8; 64],
         };
 
-        if !consts::APPROVED_VERSIONS.contains(&this.get_version()?) {
-            return Err(Zoom65Error::UnknownFirmwareVersion);
-        }
         Ok(this)
     }
 
@@ -58,14 +61,6 @@ impl Zoom65v3 {
         let slice = &self.buf[..len];
         assert!(slice[0] == payload[1]);
         Ok(slice.to_vec())
-    }
-
-    /// Get the version id tracked by the web driver
-    #[inline(always)]
-    pub fn get_version(&mut self) -> Zoom65Result<u8> {
-        let res = self.execute(abi::get_version())?;
-        // Return the version byte (at least, the one that the web driver tracks)
-        Ok(res[2])
     }
 
     /// Set the screen theme. Will reset the screen back to the meletrix logo

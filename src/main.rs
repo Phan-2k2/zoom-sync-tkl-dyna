@@ -204,10 +204,7 @@ async fn run(
     gpu: &Option<Either<info::GpuTemp, u8>>,
 ) -> Result<(), Box<dyn Error>> {
     let mut keyboard = Zoom65v3::open()?;
-    let version = keyboard
-        .get_version()
-        .map_err(|e| format!("failed to get keyboard version: {e}"))?;
-    println!("connected to keyboard version {version}");
+    println!("connected to keyboard");
 
     if let Some(ref args) = args.screen_args {
         #[cfg(not(target_os = "linux"))]
