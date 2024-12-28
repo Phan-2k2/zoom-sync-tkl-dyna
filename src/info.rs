@@ -134,11 +134,15 @@ impl CpuTemp {
     pub fn get_temp(&mut self, farenheit: bool) -> Option<u8> {
         self.maybe_cpu.as_mut().map(|cpu| {
             cpu.refresh();
-            let mut temp = cpu.temperature();
-            if farenheit {
-                temp = temp * 9. / 5. + 32.;
+            match cpu.temperature() {
+                Some(mut temp) => {
+                    if farenheit {
+                        temp = temp * 9. / 5. + 32.;
+                    }
+                    temp as u8
+                },
+                None => 0,
             }
-            temp as u8
         })
     }
 }

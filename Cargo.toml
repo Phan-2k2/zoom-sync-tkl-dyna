@@ -15,7 +15,7 @@ chrono = "0.4.38" # local time
 
 [dependencies]
 # keyboard management
-zoom65v3 = { path = "./zoom65v3", version = "0.2" }
+zoom65v3 = { path = "./zoom65v3", version = "0.3" }
 
 # runtime and scaffalding
 tokio = { version = "1.41", features = ["full"] }
@@ -38,7 +38,7 @@ chrono.workspace = true # local time
 ipinfo = "3.0.1" # free geolocation api
 open-meteo-api = "0.1.4" # free weather api
 nvml-wrapper = "0.10.0" # nvidia gpu temp
-sysinfo = "0.32.0" # cpu temp
+sysinfo = "0.33.1" # cpu temp
 
 [target.'cfg(target_os = "linux")'.dependencies]
 evdev = { version = "0.12.2", features = ["tokio"] } # reading keypress events on linux
