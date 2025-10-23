@@ -20,6 +20,7 @@ impl Arg for u32 {
     }
 }
 
+// I'm new to rust, this is some dark magic if i've ever seen one
 macro_rules! impl_command_abi {
     [$(
         $( #[doc = $( $doc:tt )* ] )*
@@ -32,9 +33,7 @@ macro_rules! impl_command_abi {
                 let len = const { 0 $($( + $hardcode - $hardcode + 1 )*)? $( + $type::SIZE )* };
                 let mut buf = [0u8; 33];
                 buf[0] = 0x0;
-                buf[1] = 88;
-                buf[2] = len as u8;
-                let mut cur = 3;
+                let mut cur = 1;
                 $($(
                     buf[cur] = $hardcode;
                     cur += 1;
@@ -44,6 +43,37 @@ macro_rules! impl_command_abi {
                     cur += $type::SIZE;
                     buf[start..cur].copy_from_slice(&$arg.to_bytes());
                 )*
+
+                //here lies some dumbass math they thought would be funny to include 
+                //because why not obsfucate your code as much as you can
+                let mut magic_number_1: i32 = 0;
+                for x in 9..len {
+                    magic_number_1 += buf[x] as i32
+                }
+                magic_number_1 = magic_number_1 ^ 255;
+                buf[23] = (magic_number_1 & 255) as u8;
+
+                let mut magic_number_2: i32 = 65535;
+                for y in 0..len {
+                    magic_number_2 = magic_number_2 ^ ((buf[y] as i32) << 8);
+
+                    for z in 0..8 {
+                        if magic_number_2 ^ 32768 > 0{
+                            magic_number_2 = (magic_number_2 << 1) ^ 4129;
+                        } else {
+                            magic_number_2 = magic_number_2 << 1;
+                        }
+                        magic_number_2 = magic_number_2 & 65535;
+                    }
+                }
+                buf[7] = (magic_number_2 >> 8) as u8;
+                buf[6] = magic_number_2 as u8;
+
+
+
+
+
+
                 buf
             }
         )*
@@ -71,24 +101,24 @@ impl_command_abi![
     /* MEDIA COMMANDS */
 
     /// deleting the currently uploaded image and reset back to the chrome dino
-    fn delete_image([165, 2, 224]);
+    // fn delete_image([165, 2, 224]);
 
     /// deleting the currently uploaded gif and reset back to nyan cat
-    fn delete_gif([165, 2, 225]);
+    // fn delete_gif([165, 2, 225]);
 
     /// signaling the start of an upload
-    fn upload_start([165, 2, 240], channel: UploadChannel);
+    // fn upload_start([165, 2, 240], channel: UploadChannel);
 
     /// signaling the length of an upload
-    fn upload_length([165, 2, 208], len: u32);
+    // fn upload_length([165, 2, 208], len: u32);
 
     /// signaling the end of an upload
-    fn upload_end([165, 2, 241, 1]);
+    // fn upload_end([165, 2, 241, 1]);
 
     /* SETTER COMMANDS */
 
     /// setting the system clock
-    fn set_time([165, 1, 16], year: u8, month: u8, day: u8, hour: u8, minute: u8, second: u8);
+    fn set_time([28, 3, 0, 0, 0, 15, 0, 0, 165, 56, 0, 10, 0, 1], year_byte1: u8, year_byte2: u8, month: u8, day: u8, hour: u8, minute: u8, second: u8, week_day: u8);
 
     /// setting the weather icon and current/min/max temperatures
     fn set_weather([165, 1, 32], icon: Icon, current: u8, low: u8, high: u8);
@@ -96,6 +126,9 @@ impl_command_abi![
     /// setting the cpu/gpu temp and download rate
     fn set_system_info([165, 1, 64], cpu_temp: u8, gpu_temp: u8, download: DumbFloat16);
 ];
+
+
+
 
 /* GETTER COMMANDS */
 
