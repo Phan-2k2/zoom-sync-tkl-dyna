@@ -173,7 +173,6 @@ enum Cli {
 
 pub fn apply_time(keyboard: &mut Zoom65v3, _12hr: bool) -> Result<(), Box<dyn Error>> {
     let time = chrono::Local::now();
-    println!("time collected: {}", time);
     keyboard
         .set_time(time, _12hr)
         .map_err(|e| format!("failed to set time: {e}"))?;
