@@ -58,10 +58,10 @@ impl Zoom65v3 {
     /// Internal method to execute a payload and read the response
     fn execute(&mut self, payload: [u8; 33]) -> Zoom65Result<Vec<u8>> {
         self.device.write(&payload)?;
-        println!("{:x?}", payload);
+        println!("Output buffer: {:x?}", payload);
         let len = self.device.read(&mut self.buf)?;
         let slice = &self.buf[0..len];
-        println!("{:x?}", slice);
+        println!("Response: {:x?}", slice);
         assert!(slice[0] == payload[1]);
         Ok(slice.to_vec())
     }
