@@ -187,8 +187,8 @@ impl Zoom65v3 {
         download_rate: f32,
     ) -> Zoom65Result<()> {
         let download = DumbFloat16::new(download_rate);
-        let res = self.execute(abi::set_system_info(cpu_temp, gpu_temp, download))?;
-        (res[1] == 1 && res[2] == 1)
+        let res = self.execute(abi::generate_sysinfo_buffer(cpu_temp, gpu_temp, download))?;
+        (res[1] == 1 && res[0] == 28)
             .then_some(())
             .ok_or(Zoom65Error::UpdateCommandFailed)
     }
