@@ -294,29 +294,6 @@ async fn run(
                         download,
                     )?;
                 }
-            },
-            Some(Some(res)) = {
-                OptionFuture::from(reactive_stream.as_mut().map(|s| s.next()))
-            } => {
-                match res {
-                    Ok(Err(e)) => return Err(Box::new(e)),
-                    // keypress, play gif if not already running
-                    #[cfg(target_os = "linux")]
-                    Ok(Ok(ev)) if !is_reactive_running => {
-                        if matches!(ev.kind(), evdev::InputEventKind::Key(_)) {
-                            is_reactive_running = true;
-                            keyboard.screen_switch()?;
-                        }
-                    },
-                    // timeout, reset back to image
-                    Err(_) if is_reactive_running => {
-                        is_reactive_running = false;
-                        keyboard.reset_screen()?;
-                        keyboard.screen_switch()?;
-                        keyboard.screen_switch()?;
-                    },
-                    _ => {}
-                }
             }
         }
     }

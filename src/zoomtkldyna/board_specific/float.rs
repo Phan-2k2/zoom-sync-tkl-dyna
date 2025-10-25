@@ -39,7 +39,8 @@ impl DumbFloat16 {
     /// Convert a floating point number to the byte representation.
     #[inline(always)]
     pub fn to_bit_repr(&self) -> [u8; 2] {
-        self.0.to_be_bytes()
+        (self.0 / 10).to_be_bytes()
+        //for some reason the bit representation of this value comes out 10 times higher than expected.
     }
 
     /// Convert a byte representation back to a floating point.

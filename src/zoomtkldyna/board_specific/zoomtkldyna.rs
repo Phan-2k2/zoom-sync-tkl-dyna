@@ -2,7 +2,7 @@
 
 use std::{sync::{LazyLock, RwLock}, thread::sleep, time::Duration};
 
-use crate::board_specific::checksum::checksum;
+use crate::{board_specific::checksum::checksum, screen::ScreenArgs};
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
 use crate::board_specific::float::DumbFloat16;
 use hidapi::{HidApi, HidDevice};
@@ -20,7 +20,7 @@ pub mod consts {
 static API: LazyLock<RwLock<HidApi>> =
     LazyLock::new(|| RwLock::new(HidApi::new().expect("failed to init hidapi")));
 
-/// High level abstraction for managing a zoom65 v3 keyboard
+/// High level abstraction for managing a zoom tkl dyna keyboard
 pub struct ZoomTklDyna {
     pub device: HidDevice,
     buf: [u8; 64],
@@ -59,79 +59,13 @@ impl ZoomTklDyna {
         Ok(slice.to_vec())
     }
 
-    /// Set the screen theme. Will reset the screen back to the meletrix logo
-    #[inline(always)]
-    pub fn screen_theme(&mut self, theme: ScreenTheme) -> ZoomTklDynaResult<()> {
-        let res = self.execute(abi::screen_theme(theme))?;
-        (res[1] == 1 && res[2] == 1)
-            .then_some(())
-            .ok_or(ZoomTklDynaError::UpdateCommandFailed)
-    }
-
     /// Increment the screen position
     #[inline(always)]
-    pub fn screen_up(&mut self) -> ZoomTklDynaResult<()> {
-        let res = self.execute(abi::screen_up())?;
-        (res[1] == 1 && res[2] == 1)
+    pub fn control_screen(&mut self, command : ScreenArgs) -> ZoomTklDynaResult<()> {
+        let res: Vec<u8> = self.execute(abi::generate_screen_control_buffer(command))?;
+        (res[1] == 1 && res[0] == 28)
             .then_some(())
             .ok_or(ZoomTklDynaError::UpdateCommandFailed)
-    }
-
-    /// Decrement the screen position
-    #[inline(always)]
-    pub fn screen_down(&mut self) -> ZoomTklDynaResult<()> {
-        let res = self.execute(abi::screen_down())?;
-        (res[1] == 1 && res[2] == 1)
-            .then_some(())
-            .ok_or(ZoomTklDynaError::UpdateCommandFailed)
-    }
-
-    /// Switch the active screen
-    #[inline(always)]
-    pub fn screen_switch(&mut self) -> ZoomTklDynaResult<()> {
-        let res = self.execute(abi::screen_switch())?;
-        (res[1] == 1 && res[2] == 1)
-            .then_some(())
-            .ok_or(ZoomTklDynaError::UpdateCommandFailed)
-    }
-
-    /// Reset the screen back to the meletrix logo
-    #[inline(always)]
-    pub fn reset_screen(&mut self) -> ZoomTklDynaResult<()> {
-        let res = self.execute(abi::reset_screen())?;
-        (res[1] == 1 && res[2] == 1)
-            .then_some(())
-            .ok_or(ZoomTklDynaError::UpdateCommandFailed)
-    }
-
-    /// Set the screen to a specific position and offset
-    pub fn set_screen(&mut self, position: ScreenPosition) -> ZoomTklDynaResult<()> {
-        let (y, x) = position.to_directions();
-
-        // Back to default
-        self.reset_screen()?;
-
-        // Move screen up or down
-        match y {
-            y if y < 0 => {
-                for _ in 0..y.abs() {
-                    self.screen_up()?;
-                }
-            },
-            y if y > 0 => {
-                for _ in 0..y.abs() {
-                    self.screen_down()?;
-                }
-            },
-            _ => {},
-        }
-
-        // Switch screen to offset
-        for _ in 0..x {
-            self.screen_switch()?;
-        }
-
-        Ok(())
     }
 
     /// Update the keyboards current time.

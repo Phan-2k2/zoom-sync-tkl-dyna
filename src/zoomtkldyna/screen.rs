@@ -1,27 +1,20 @@
 use std::error::Error;
 
 use bpaf::{Bpaf, Parser};
-// use zoom65v3::types::ScreenPosition;
-// use zoom65v3::Zoom65v3;
-use crate::board_specific::types::ScreenPosition;
 use crate::ZoomTklDyna;
 
 
 /// Screen options:
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Bpaf)]
 pub enum ScreenArgs {
-    Screen(
-        /// Reset and move the screen to a specific position.
-        /// [cpu|gpu|download|time|weather|meletrix|zoom65|image|gif|battery]
-        #[bpaf(short('s'), long("screen"), argument("POSITION"))]
-        ScreenPosition,
-    ),
     /// Move the screen up
     Up,
     /// Move the screen down
     Down,
     /// Switch the screen offset
-    Switch,
+    Enter,
+    Return,
+    Reset,
     #[cfg(target_os = "linux")]
     /// Reactive image/gif mode
     #[bpaf(skip)]
@@ -45,10 +38,11 @@ pub fn screen_args_with_reactive() -> impl Parser<ScreenArgs> {
 
 pub fn apply_screen(args: &ScreenArgs, keyboard: &mut ZoomTklDyna) -> Result<(), Box<dyn Error>> {
     match args {
-        ScreenArgs::Screen(pos) => keyboard.set_screen(*pos)?,
-        ScreenArgs::Up => keyboard.screen_up()?,
-        ScreenArgs::Down => keyboard.screen_down()?,
-        ScreenArgs::Switch => keyboard.screen_switch()?,
+        ScreenArgs::Up => keyboard.control_screen(ScreenArgs::Up)?,
+        ScreenArgs::Down => keyboard.control_screen(ScreenArgs::Down)?,
+        ScreenArgs::Enter => keyboard.control_screen(ScreenArgs::Enter)?,
+        ScreenArgs::Return => keyboard.control_screen(ScreenArgs::Return)?,
+        ScreenArgs::Reset => keyboard.control_screen(ScreenArgs::Reset)?,
         #[cfg(target_os = "linux")]
         ScreenArgs::Reactive => todo!("cannot apply reactive gif natively"),
     };

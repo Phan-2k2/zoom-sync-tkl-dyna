@@ -1,3 +1,3 @@
-# zoom65v3
+# zoomtkldyna
 
-Reverse engineered hidapi bindings to zoom65v3 screen modules
+Reverse engineered hidapi bindings to zoomtkldyna screen modules

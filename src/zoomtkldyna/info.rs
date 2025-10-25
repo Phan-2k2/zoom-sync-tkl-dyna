@@ -175,7 +175,11 @@ pub fn apply_system(
         gpu_temp = 99;
     }
 
-    let download = download.unwrap_or_default();
+    let mut download = download.unwrap_or_default();
+    if download >= 1000.0 {
+        eprintln!("warning: actual download temerature at {download}. clamping to 999.9");
+        download = 999.9;
+    }
 
     keyboard
         .set_system_info(cpu_temp, gpu_temp, download)
