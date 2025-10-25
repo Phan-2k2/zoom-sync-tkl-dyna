@@ -3,8 +3,9 @@ use std::error::Error;
 use bpaf::{Bpaf, Parser};
 // use zoom65v3::types::ScreenPosition;
 // use zoom65v3::Zoom65v3;
-use zoomtkldyna::types::ScreenPosition;
-use zoomtkldyna::ZoomTklDyna;
+use crate::board_specific::types::ScreenPosition;
+use crate::ZoomTklDyna;
+
 
 /// Screen options:
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Bpaf)]

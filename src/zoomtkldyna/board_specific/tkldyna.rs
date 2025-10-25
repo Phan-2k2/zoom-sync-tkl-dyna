@@ -2,18 +2,12 @@
 
 use std::{sync::{LazyLock, RwLock}, thread::sleep, time::Duration};
 
-use checksum::checksum;
+use crate::board_specific::checksum::checksum;
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
-use float::DumbFloat16;
+use crate::board_specific::float::DumbFloat16;
 use hidapi::{HidApi, HidDevice};
-use types::{ScreenPosition, ScreenTheme, UploadChannel, ZoomTklDynaResult};
-
-use crate::types::{Icon, ZoomTklDynaError};
-
-pub mod abi;
-pub mod checksum;
-pub mod float;
-pub mod types;
+use crate::board_specific::types::{ScreenPosition, ScreenTheme, UploadChannel, ZoomTklDynaResult, Icon, ZoomTklDynaError};
+use crate::board_specific::abi;
 
 pub mod consts {
     pub const ZOOMTKLDYNA_VENDOR_ID: u16 = 0x5542;

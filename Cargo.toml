@@ -17,6 +17,8 @@ path = "src/zoom65v3/main.rs"
 
 [dependencies]
 chrono = "0.4.38" # local time
+hidapi = "2.6.3"
+thiserror = "2.0.17"
 
 # runtime and scaffalding
 tokio = { version = "1.41", features = ["full"] }

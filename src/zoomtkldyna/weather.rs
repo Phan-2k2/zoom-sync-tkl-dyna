@@ -6,10 +6,9 @@ use bpaf::Bpaf;
 use chrono::Timelike;
 use ipinfo::IpInfo;
 use open_meteo_api::query::OpenMeteo;
-// use zoom65v3::types::Icon;
-// use zoom65v3::Zoom65v3;
-use zoomtkldyna::types::Icon;
-use zoomtkldyna::ZoomTklDyna;
+
+use crate::board_specific::types::Icon;
+use crate::ZoomTklDyna;
 
 #[derive(Clone, Debug, Bpaf)]
 #[bpaf(adjacent)]

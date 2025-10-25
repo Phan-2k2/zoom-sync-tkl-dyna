@@ -1,6 +1,6 @@
-use crate::float::DumbFloat16;
+use crate::board_specific::float::DumbFloat16;
 // use crate::types::{Icon, ScreenTheme, UploadChannel};
-use crate::types::{Icon, ScreenTheme};
+use crate::board_specific::types::{Icon, ScreenTheme};
 
 pub trait Arg {
     const SIZE: usize;

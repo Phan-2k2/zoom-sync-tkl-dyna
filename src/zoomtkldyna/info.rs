@@ -8,8 +8,8 @@ use either::Either;
 use nvml_wrapper::enum_wrappers::device::TemperatureSensor;
 use nvml_wrapper::{Device, Nvml};
 use sysinfo::{Component, Components};
-// use zoom65v3::Zoom65v3;
-use zoomtkldyna::ZoomTklDyna;
+
+use crate::ZoomTklDyna;
 
 #[derive(Clone, Debug, bpaf::Bpaf)]
 pub enum CpuMode {
