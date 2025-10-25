@@ -16,10 +16,10 @@ pub mod float;
 pub mod types;
 
 pub mod consts {
-    pub const ZOOM65_VENDOR_ID: u16 = 0x5542;
-    pub const ZOOM65_PRODUCT_ID: u16 = 0xC987;
-    pub const ZOOM65_USAGE_PAGE: u16 = 65376;
-    pub const ZOOM65_USAGE: u16 = 97;
+    pub const ZOOMTKLDYNA_VENDOR_ID: u16 = 0x5542;
+    pub const ZOOMTKLDYNA_PRODUCT_ID: u16 = 0xC987;
+    pub const ZOOMTKLDYNA_USAGE_PAGE: u16 = 65376;
+    pub const ZOOMTKLDYNA_USAGE: u16 = 97;
 }
 
 /// Lazy handle to hidapi
@@ -41,10 +41,10 @@ impl ZoomTklDyna {
             device: api
                 .device_list()
                 .find(|d| {
-                    d.vendor_id() == consts::ZOOM65_VENDOR_ID
-                        && d.product_id() == consts::ZOOM65_PRODUCT_ID
-                        && d.usage_page() == consts::ZOOM65_USAGE_PAGE
-                        && d.usage() == consts::ZOOM65_USAGE
+                    d.vendor_id() == consts::ZOOMTKLDYNA_VENDOR_ID
+                        && d.product_id() == consts::ZOOMTKLDYNA_PRODUCT_ID
+                        && d.usage_page() == consts::ZOOMTKLDYNA_USAGE_PAGE
+                        && d.usage() == consts::ZOOMTKLDYNA_USAGE
                 })
                 .ok_or(ZoomTklDynaError::DeviceNotFound)?
                 .open_device(&api)?,
