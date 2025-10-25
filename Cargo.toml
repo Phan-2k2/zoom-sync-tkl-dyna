@@ -7,16 +7,16 @@ authors = [ "ozwaldorf <self@ossian.dev>" ]
 license = "MIT"
 edition = "2021"
 
-[workspace]
-members = ["zoom65v3", "zoomtkldyna"]
+[[bin]]
+name = "zoomtkldyna"
+path = "src/zoomtkldyna/main.rs"
 
-[workspace.dependencies]
-chrono = "0.4.38" # local time
+[[bin]]
+name = "zoom65v3"
+path = "src/zoom65v3/main.rs"
 
 [dependencies]
-# keyboard management
-zoom65v3 = { path = "./zoom65v3", version = "0.3" }
-zoomtkldyna = { path = "./zoomtkldyna", version = "0.1" }
+chrono = "0.4.38" # local time
 
 # runtime and scaffalding
 tokio = { version = "1.41", features = ["full"] }
@@ -35,7 +35,6 @@ gif = "0.13.1" # gif encoding
 rgb565 = "0.1.3" # image encoding
 
 # data fetching
-chrono.workspace = true # local time
 ipinfo = "3.0.1" # free geolocation api
 open-meteo-api = "0.1.4" # free weather api
 nvml-wrapper = "0.10.0" # nvidia gpu temp

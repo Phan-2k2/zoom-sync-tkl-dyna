@@ -16,6 +16,7 @@ use image::AnimationDecoder;
 use tokio_stream::StreamExt;
 // use zoom65v3::Zoom65v3;
 use zoomtkldyna::ZoomTklDyna;
+mod types;
 
 use crate::info::{apply_system, cpu_mode, gpu_mode, system_args, CpuMode, GpuMode, SystemArgs};
 use crate::media::{encode_gif, encode_image};
