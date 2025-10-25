@@ -149,19 +149,30 @@ impl ZoomTklDyna {
         // so 2025 comes out as [00, 00, 07, e9] (hex), or [0, 0, 7, 233] (decimal)
         // if you can make this keyboard last beyond the year 65535, then i applaud you, because we've run
         // out bits to represent the date on this screen LOL
-        let current_year: i32 = 2030;
+        let current_year: i32 = 2025;
         let current_year_first_hex: [u8; _] = current_year.to_be_bytes();
         let current_day = time.weekday().number_from_sunday() - 1;
 
-        let res: Vec<u8> = self.execute(abi::set_time(
+        // let res: Vec<u8> = self.execute(abi::set_time(
+        //     current_year_first_hex[2],
+        //     current_year_first_hex[3],
+        //     10 as u8,
+        //     22 as u8,
+        //     19 as u8,
+        //     53 as u8,
+        //     27 as u8,
+        //     3 as u8
+        // ))?;
+
+        let res: Vec<u8> = self.execute(abi::generate_time_buffer(
             current_year_first_hex[2],
             current_year_first_hex[3],
-            (time.month() + 1) as u8,
-            time.day() as u8,
-            if _12hr { time.hour12().1 } else { time.hour() } as u8,
-            time.minute() as u8,
-            time.second() as u8,
-            current_day as u8
+            10 as u8,
+            22 as u8,
+            12 as u8,
+            10 as u8,
+            3 as u8,
+            4 as u8
         ))?;
 
         if res[0] == 3 {
