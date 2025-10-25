@@ -153,35 +153,19 @@ impl ZoomTklDyna {
         let current_year_first_hex: [u8; _] = current_year.to_be_bytes();
         let current_day = time.weekday().number_from_sunday() - 1;
 
-        // let res: Vec<u8> = self.execute(abi::set_time(
-        //     current_year_first_hex[2],
-        //     current_year_first_hex[3],
-        //     10 as u8,
-        //     22 as u8,
-        //     19 as u8,
-        //     53 as u8,
-        //     27 as u8,
-        //     3 as u8
-        // ))?;
-
         let res: Vec<u8> = self.execute(abi::generate_time_buffer(
             current_year_first_hex[2],
             current_year_first_hex[3],
-            10 as u8,
-            22 as u8,
-            12 as u8,
-            10 as u8,
-            3 as u8,
-            4 as u8
+            time.month() as u8,
+            time.day() as u8,
+            time.hour() as u8,
+            time.minute() as u8,
+            time.second() as u8,
+            current_day as u8
         ))?;
-
-        if res[0] == 3 {
-            let success_datapoint = [3 as u8];
-            self.device.write(&success_datapoint);
-            Ok(())
-        } else {
-            Err(ZoomTklDynaError::UpdateCommandFailed)
-        }
+        (res[1] == 1 && res[0] == 28)
+            .then_some(())
+            .ok_or(ZoomTklDynaError::UpdateCommandFailed)
     }
 
     /// Update the keyboards current weather report

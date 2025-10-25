@@ -31,10 +31,11 @@ macro_rules! impl_command_abi {
             #[allow(unused_mut, unused_variables, unused_assignments)]
             pub fn $name( $( $arg: $type ),* ) -> [u8; 33] {
                 let len = const { 0 $($( + $hardcode - $hardcode + 1 )*)? $( + $type::SIZE )* };
-                println!("LEN: {}", len);
                 let mut buf = [0u8; 33];
                 buf[0] = 0x0;
-                let mut cur = 1;
+                buf[1] = 88;
+                buf[2] = len as u8;
+                let mut cur = 3;
                 $($(
                     buf[cur] = $hardcode;
                     cur += 1;
@@ -44,33 +45,6 @@ macro_rules! impl_command_abi {
                     cur += $type::SIZE;
                     buf[start..cur].copy_from_slice(&$arg.to_bytes());
                 )*
-
-                //here lies some dumbass math they thought would be funny to include 
-                //because why not obsfucate your code as much as you can
-                let mut magic_number_1: i32 = 0;
-                for x in 10..len {
-                    magic_number_1 += buf[x] as i32
-                }
-                magic_number_1 = magic_number_1 ^ 255;
-                buf[23] = (magic_number_1 & 255) as u8;
-
-                let mut magic_number_2: i32 = 65535;
-                for y in 1..len {
-                    magic_number_2 = magic_number_2 ^ ((buf[y] as i32) << 8);
-
-                    for z in 1..9 {
-                        if magic_number_2 ^ 32768 > 0 {
-                            magic_number_2 = (magic_number_2 << 1) ^ 4129;
-                        } else {
-                            magic_number_2 = magic_number_2 << 1;
-                        }
-                        magic_number_2 = magic_number_2 & 65535;
-                    }
-                }
-                buf[8] = (magic_number_2 >> 8) as u8;
-                buf[7] = magic_number_2 as u8;
-
-                println!("{:x}, {:x}, {:x}", buf[7], buf[8], buf[23]);
                 buf
             }
         )*
@@ -124,7 +98,6 @@ impl_command_abi![
     fn set_system_info([165, 1, 64], cpu_temp: u8, gpu_temp: u8, download: DumbFloat16);
 ];
 
-
 //trying to replicate this bs as best I can because wtf
 pub fn generate_time_buffer(year_byte1: u8, year_byte2: u8, month: u8, day: u8, hour: u8, minute: u8, second: u8, week_day: u8) -> [u8; 33] {
 
@@ -133,9 +106,9 @@ pub fn generate_time_buffer(year_byte1: u8, year_byte2: u8, month: u8, day: u8, 
     let mut intial_data: [u8; 14] = [165, 56, 0, 10, 0, 1, year_byte1, year_byte2, month, day, hour, minute, second, week_day];
     data_buffer[8..22].copy_from_slice(&intial_data);
 
-
     //here lies some dumbass math they thought would be funny to include 
     //because why not obsfucate your code as much as you can
+    //I'm literally calling them magic numbers because they're dumb AF
     let mut magic_number_1: i32 = 0;
     for x in 9..data_buffer_len {
         magic_number_1 += data_buffer[x] as i32
@@ -146,9 +119,6 @@ pub fn generate_time_buffer(year_byte1: u8, year_byte2: u8, month: u8, day: u8, 
     data_buffer[0] = 28;
     data_buffer[1] = 3;
     data_buffer[5] = 15;
-
-    println!("HEX: {:x?}", data_buffer);
-    println!("DEC: {:?}", data_buffer);
 
     let mut magic_number_2: i32 = 65535;
     for y in 0..data_buffer_len {
@@ -163,8 +133,6 @@ pub fn generate_time_buffer(year_byte1: u8, year_byte2: u8, month: u8, day: u8, 
             magic_number_2 = magic_number_2 & 65535;
         }
     }
-
-    println!("{}", magic_number_2);
 
     data_buffer[7] = (magic_number_2 >> 8) as u8;
     data_buffer[6] = magic_number_2 as u8;
