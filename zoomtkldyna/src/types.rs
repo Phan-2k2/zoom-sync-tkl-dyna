@@ -61,56 +61,65 @@ impl Arg for UploadChannel {
 #[derive(Debug, Clone)]
 #[repr(u8)]
 pub enum Icon {
-    DayClear = 0,
-    DayPartlyCloudy = 1,
-    DayPartlyRainy = 2,
-    NightPartlyCloudy = 3,
-    NightClear = 4,
-    Cloudy = 5,
-    Rainy = 6,
-    Snowfall = 7,
-    Thunderstorm = 8,
+    DayClearSunny = 1,
+    DayPartlyCloudy = 2,
+    Cloudy = 3,
+    Rainy = 4,
+    Snowy = 5,
+    NightClearMoon = 6,
+    NightCloudy = 7,
+    ErrorIcon = 8,
 }
 
 impl Icon {
     /// Convert a WMO index into a weather icon, adapting for day and night
     /// Adapted from the list at the bottom of <https://open-meteo.com/en/docs>
-    pub fn from_wmo(wmo: u8, is_day: bool) -> Option<Self> {
+    pub fn from_wmo(wmo: i32, is_day: bool) -> Option<Self> {
         match wmo {
             // clear and mainly clear
-            0 | 1 => Some(if is_day { Icon::DayClear } else { Icon::NightClear }),
+            0 | 1 => Some(if is_day { Icon::DayClearSunny } else { Icon::NightClearMoon }),
 
             // partly cloudy
-            2 => Some(if is_day { Icon::DayPartlyCloudy } else { Icon::NightPartlyCloudy }),
+            2 => Some(Icon::Cloudy),
 
             // overcast
-            3
+            3 => Some(Icon::Cloudy),
             // foggy
-            | 45 | 48 => Some(Icon::Cloudy),
+            45 => Some(Icon::Cloudy),
+            48 => Some(Icon::Cloudy),
 
             // drizzle
-            51 | 53 | 55
+            51 | 53 | 55 => Some(Icon::Rainy),
             // freezing drizzle
-            |56 | 57
+            56 => Some(Icon::Rainy),
+            57 => Some(Icon::Rainy),
             // rain
-            | 61 | 63 | 65
+            61 => Some(Icon::Rainy), 
+            63 => Some(Icon::Rainy),
+            65 => Some(Icon::Rainy),
             // freezing rain
-            | 66 | 67 => Some(Icon::Rainy),
-
-            // rain showers
-            80..=82 => Some(if is_day { Icon::DayPartlyRainy } else { Icon::Rainy }),
-
+            66 => Some(Icon::Rainy),
+            67 => Some(Icon::Rainy),
 
             // snowfall
-            | 71 | 73 | 75 | 77
+            71 => Some(Icon::Snowy),
+            73 => Some(Icon::Snowy),
+            75 => Some(Icon::Snowy),
+            77 => Some(Icon::Snowy),
+            
+            // rain showers
+            80 => Some(Icon::Rainy),
+            81 | 82=> Some(Icon::Rainy),
             // snow showers
-            | 85 | 86 => Some(Icon::Snowfall),
+            85 => Some(Icon::Snowy),
+            86 => Some(Icon::Snowy),
 
             // thunderstorm
-            95 | 96 | 99 => Some(Icon::Thunderstorm),
+            95 => Some(Icon::Rainy),
+            96 | 99 => Some(Icon::Snowy),
 
             // unknown
-            _ => None
+            _ => Some(Icon::ErrorIcon)
         }
     }
 }

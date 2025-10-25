@@ -1,6 +1,6 @@
 //! High level hidapi abstraction for interacting with zoom65v3 screen modules
 
-use std::sync::{LazyLock, RwLock};
+use std::{sync::{LazyLock, RwLock}, thread::sleep, time::Duration};
 
 use checksum::checksum;
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
@@ -170,9 +170,9 @@ impl ZoomTklDyna {
 
     /// Update the keyboards current weather report
     #[inline(always)]
-    pub fn set_weather(&mut self, icon: Icon, current: u8, low: u8, high: u8) -> ZoomTklDynaResult<()> {
-        let res = self.execute(abi::set_weather(icon, current, low, high))?;
-        (res[1] == 1 && res[2] == 1)
+    pub fn set_weather(&mut self, icon: Icon, current: f32, low: f32, high: f32) -> ZoomTklDynaResult<()> {
+        let mut res: Vec<u8> = self.execute(abi::generate_weather_buffer(icon, current, low, high))?;
+        (res[1] == 1 && res[0] == 28)
             .then_some(())
             .ok_or(ZoomTklDynaError::UpdateCommandFailed)
     }

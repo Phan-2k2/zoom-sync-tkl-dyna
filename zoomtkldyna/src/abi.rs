@@ -1,5 +1,6 @@
 use crate::float::DumbFloat16;
 use crate::types::{Icon, ScreenTheme, UploadChannel};
+use chrono::{DateTime, Datelike, TimeZone, Timelike};
 
 pub trait Arg {
     const SIZE: usize;
@@ -109,17 +110,109 @@ pub fn generate_time_buffer(year_byte1: u8, year_byte2: u8, month: u8, day: u8, 
     //here lies some dumbass math they thought would be funny to include 
     //because why not obsfucate your code as much as you can
     //I'm literally calling them magic numbers because they're dumb AF
+    // let mut magic_number_2: i32 = 65535;
+    // for y in 0..data_buffer_len {
+    //     magic_number_2 = magic_number_2 ^ ((data_buffer[y] as i32) << 8);
+
+    //     for z in 0..8 {
+    //         if (magic_number_2 & 32768) > 0 {
+    //             magic_number_2 = (magic_number_2 << 1) ^ 4129;
+    //         } else {
+    //             magic_number_2 = magic_number_2 << 1;
+    //         }
+    //         magic_number_2 = magic_number_2 & 65535;
+    //     }
+    // }
+
+    let magic_number_2: i32 = magic_checksum_processing(data_buffer, data_buffer_len);
+
+    data_buffer[7] = (magic_number_2 >> 8) as u8;
+    data_buffer[6] = magic_number_2 as u8;
+
+    let mut final_buffer: [u8; 33] = [0u8; 33];
+    final_buffer[0] = 0x0;
+    final_buffer[1..33].copy_from_slice(&data_buffer);
+    final_buffer
+
+}
+
+pub fn generate_weather_buffer(icon: Icon, current: f32, low: f32, high: f32) -> [u8; 33]  {
+    // ke = current
+    // xe = magic_temp_current_1
+    // z = low
+    // A = magic_temp_low_1
+    // O = high
+    // q = magic_temp_high_1
+
+    let mut magic_temp_current_1 = magic_temp_processing(current);
+
+    let mut magic_temp_low_1 = magic_temp_processing(low);
+
+    let mut magic_temp_high_1 = magic_temp_processing(high);
+
+    // let time = chrono::Local::now();
+    // let cur_hours = time.day();
+
+    //J = temp_data_array
+    let mut temp_data_array: [u8; 9] = [0; 9];
+    let temp_data_array_len: usize = temp_data_array.len();
+    temp_data_array[0] = 254;
+    temp_data_array[1] = 0;
+    temp_data_array[2] = icon as u8;
+    temp_data_array[3] = ((magic_temp_current_1 >> 8) & 255) as u8;
+    temp_data_array[4] = magic_temp_current_1 as u8;
+    temp_data_array[5] = ((magic_temp_low_1 >> 8) & 255) as u8;
+    temp_data_array[6] = magic_temp_low_1 as u8;
+    temp_data_array[7] = ((magic_temp_high_1 >> 8) & 255) as u8;
+    temp_data_array[8] = magic_temp_high_1 as u8;
+
+    //Pe = data_buffer
+    let mut data_buffer = [0; 32];
+    let data_buffer_len = data_buffer.len();
+    data_buffer[8] = 165;
+    data_buffer[9] = temp_data_array[0];
+    data_buffer[10] = 0;
+    data_buffer[11] = 8;
+    
+    for z in 1..temp_data_array_len {
+        data_buffer[11 + z] = temp_data_array[z];
+    }
+
     let mut magic_number_1: i32 = 0;
-    for x in 9..data_buffer_len {
-        magic_number_1 += data_buffer[x] as i32
+    for z in 9..data_buffer.len() {
+        magic_number_1 += data_buffer[z] as i32
     }
     magic_number_1 = magic_number_1 ^ 255;
-    data_buffer[22] = (magic_number_1 & 255) as u8;
 
+    data_buffer[12 + 8] = (magic_number_1 & 255) as u8;
     data_buffer[0] = 28;
-    data_buffer[1] = 3;
-    data_buffer[5] = 15;
+    data_buffer[1] = 2;
+    data_buffer[5] = 4 + 8 + 1;
 
+    let magic_number_2 = magic_checksum_processing(data_buffer, data_buffer_len);
+
+    data_buffer[7] = (magic_number_2 >> 8) as u8;
+    data_buffer[6] = magic_number_2 as u8;
+
+    println!("{:x?}", data_buffer);
+
+    let mut final_buffer: [u8; 33] = [0u8; 33];
+    final_buffer[0] = 0x0;
+    final_buffer[1..33].copy_from_slice(&data_buffer);
+    final_buffer
+}
+
+fn magic_temp_processing (temp : f32) -> i32 {
+    let mut return_value: i32 = 0;
+    if temp > 0.0 {
+        return_value = (temp * 10.0).round() as i32 | 0;
+    } else {
+        return_value = (temp * -1.0 * 10.0).round() as i32 | 32768;
+    }
+    return_value
+}
+
+fn magic_checksum_processing (data_buffer : [u8; 32], data_buffer_len :usize ) -> i32 {
     let mut magic_number_2: i32 = 65535;
     for y in 0..data_buffer_len {
         magic_number_2 = magic_number_2 ^ ((data_buffer[y] as i32) << 8);
@@ -133,18 +226,8 @@ pub fn generate_time_buffer(year_byte1: u8, year_byte2: u8, month: u8, day: u8, 
             magic_number_2 = magic_number_2 & 65535;
         }
     }
-
-    data_buffer[7] = (magic_number_2 >> 8) as u8;
-    data_buffer[6] = magic_number_2 as u8;
-
-    let mut final_buffer: [u8; 33] = [0u8; 33];
-    final_buffer[0] = 0x0;
-    final_buffer[1..33].copy_from_slice(&data_buffer);
-    final_buffer
-
+    magic_number_2
 }
-
-
 /* GETTER COMMANDS */
 
 /// Construct a payload for getting the abi version of the keyboard
