@@ -1,5 +1,5 @@
-use crate::float::DumbFloat16;
-use crate::types::{Icon, ScreenTheme, UploadChannel};
+use crate::board_specific::float::DumbFloat16;
+use crate::board_specific::types::{Icon, ScreenTheme, UploadChannel};
 
 pub trait Arg {
     const SIZE: usize;
@@ -99,9 +99,9 @@ impl_command_abi![
 
 /* GETTER COMMANDS */
 
-/// Construct a payload for getting the abi version of the keyboard
-pub const fn get_version() -> [u8; 33] {
-    let mut buf = [0u8; 33];
-    buf[1] = 1;
-    buf
-}
+// /// Construct a payload for getting the abi version of the keyboard
+// pub const fn get_version() -> [u8; 33] {
+//     let mut buf = [0u8; 33];
+//     buf[1] = 1;
+//     buf
+// }

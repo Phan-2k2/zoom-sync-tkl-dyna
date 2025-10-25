@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use hidapi::HidError;
 
-use crate::abi::Arg;
+use crate::board_specific::abi::Arg;
 
 pub type Zoom65Result<T> = Result<T, Zoom65Error>;
 

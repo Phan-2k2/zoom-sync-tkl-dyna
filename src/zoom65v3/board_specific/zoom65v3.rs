@@ -2,18 +2,12 @@
 
 use std::sync::{LazyLock, RwLock};
 
-use checksum::checksum;
+use crate::board_specific::checksum::checksum;
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
-use float::DumbFloat16;
+use crate::board_specific::float::DumbFloat16;
 use hidapi::{HidApi, HidDevice};
-use types::{ScreenPosition, ScreenTheme, UploadChannel, Zoom65Result};
-
-use crate::types::{Icon, Zoom65Error};
-
-pub mod abi;
-pub mod checksum;
-pub mod float;
-pub mod types;
+use crate::board_specific::types::{ScreenPosition, ScreenTheme, UploadChannel, Zoom65Result, Icon, Zoom65Error};
+use crate::board_specific::abi;
 
 pub mod consts {
     pub const ZOOM65_VENDOR_ID: u16 = 0x36B5;

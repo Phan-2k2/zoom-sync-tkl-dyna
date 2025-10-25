@@ -93,8 +93,8 @@ impl Arg for DumbFloat16 {
 
 #[cfg(test)]
 mod tests {
-    use crate::board_specific::float::DumbFloat16;
-
+    use super::*;
+    
     #[test]
     fn roundtrip() {
         for i in 0..u16::MAX {

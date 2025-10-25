@@ -1,8 +1,8 @@
 use std::error::Error;
 
 use bpaf::{Bpaf, Parser};
-use zoom65v3::types::ScreenPosition;
-use zoom65v3::Zoom65v3;
+use crate::board_specific::types::ScreenPosition;
+use crate::Zoom65v3;
 
 /// Screen options:
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Bpaf)]

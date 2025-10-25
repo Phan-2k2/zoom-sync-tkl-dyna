@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use std::ops::Not;
 
-use crate::abi::Arg;
+use crate::board_specific::abi::Arg;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DumbFloat16(u16);
@@ -93,7 +93,7 @@ impl Arg for DumbFloat16 {
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use super::*;
 
     #[test]
     fn roundtrip() {

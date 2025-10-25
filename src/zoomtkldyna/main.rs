@@ -25,7 +25,7 @@ mod media;
 mod screen;
 mod weather;
 mod board_specific;
-use board_specific::tkldyna::ZoomTklDyna;
+use board_specific::zoomtkldyna::ZoomTklDyna;
 
 fn farenheit() -> impl Parser<bool> {
     bpaf::short('f')

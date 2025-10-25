@@ -1,5 +1,4 @@
 use crate::board_specific::float::DumbFloat16;
-// use crate::types::{Icon, ScreenTheme, UploadChannel};
 use crate::board_specific::types::{Icon, ScreenTheme};
 
 pub trait Arg {

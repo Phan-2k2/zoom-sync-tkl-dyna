@@ -14,7 +14,6 @@ use image::codecs::png::PngDecoder;
 use image::codecs::webp::WebPDecoder;
 use image::AnimationDecoder;
 use tokio_stream::StreamExt;
-use zoom65v3::Zoom65v3;
 
 use crate::info::{apply_system, cpu_mode, gpu_mode, system_args, CpuMode, GpuMode, SystemArgs};
 use crate::media::{encode_gif, encode_image};
@@ -25,6 +24,8 @@ mod info;
 mod media;
 mod screen;
 mod weather;
+mod board_specific;
+use board_specific::zoom65v3::Zoom65v3;
 
 fn farenheit() -> impl Parser<bool> {
     bpaf::short('f')
