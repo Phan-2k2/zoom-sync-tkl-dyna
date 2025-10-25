@@ -14,7 +14,8 @@ use image::codecs::png::PngDecoder;
 use image::codecs::webp::WebPDecoder;
 use image::AnimationDecoder;
 use tokio_stream::StreamExt;
-use zoom65v3::Zoom65v3;
+// use zoom65v3::Zoom65v3;
+use zoomtkldyna::ZoomTklDyna;
 
 use crate::info::{apply_system, cpu_mode, gpu_mode, system_args, CpuMode, GpuMode, SystemArgs};
 use crate::media::{encode_gif, encode_image};
@@ -171,7 +172,7 @@ enum Cli {
     },
 }
 
-pub fn apply_time(keyboard: &mut Zoom65v3, _12hr: bool) -> Result<(), Box<dyn Error>> {
+pub fn apply_time(keyboard: &mut ZoomTklDyna, _12hr: bool) -> Result<(), Box<dyn Error>> {
     let time = chrono::Local::now();
     keyboard
         .set_time(time, _12hr)
@@ -203,7 +204,7 @@ async fn run(
     cpu: &mut Option<Either<info::CpuTemp, u8>>,
     gpu: &Option<Either<info::GpuTemp, u8>>,
 ) -> Result<(), Box<dyn Error>> {
-    let mut keyboard = Zoom65v3::open()?;
+    let mut keyboard = ZoomTklDyna::open()?;
     println!("connected to keyboard");
 
     if let Some(ref args) = args.screen_args {
@@ -231,13 +232,13 @@ async fn run(
         ScreenArgs::Reactive => {
             println!("initializing reactive mode");
             keyboard
-                .set_screen(zoom65v3::types::LogoOffset::Image.pos())
+                .set_screen(zoomtkldyna::types::LogoOffset::Image.pos())
                 .unwrap();
             let stream = evdev::enumerate().find_map(|(_, device)| {
                 device
                     .name()
                     .unwrap()
-                    .contains("Zoom65 v3 Keyboard")
+                    .contains("Zoom TKL Dyna Keyboard")
                     .then_some(
                         device
                             .into_event_stream()
@@ -327,7 +328,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     match args {
         Cli::Run(args) => refresh(args).await,
         Cli::Set { set_command } => {
-            let mut keyboard = Zoom65v3::open()?;
+            let mut keyboard = ZoomTklDyna::open()?;
             match set_command {
                 SetCommand::Time => apply_time(&mut keyboard, false),
                 SetCommand::Weather {

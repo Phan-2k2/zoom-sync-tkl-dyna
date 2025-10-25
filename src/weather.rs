@@ -6,8 +6,10 @@ use bpaf::Bpaf;
 use chrono::Timelike;
 use ipinfo::IpInfo;
 use open_meteo_api::query::OpenMeteo;
-use zoom65v3::types::Icon;
-use zoom65v3::Zoom65v3;
+// use zoom65v3::types::Icon;
+// use zoom65v3::Zoom65v3;
+use zoomtkldyna::types::Icon;
+use zoomtkldyna::ZoomTklDyna;
 
 #[derive(Clone, Debug, Bpaf)]
 #[bpaf(adjacent)]
@@ -102,7 +104,7 @@ pub async fn get_weather(
 }
 
 pub async fn apply_weather(
-    keyboard: &mut Zoom65v3,
+    keyboard: &mut ZoomTklDyna,
     args: &mut WeatherArgs,
     farenheit: bool,
 ) -> Result<(), Box<dyn Error>> {
