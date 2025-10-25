@@ -1,6 +1,6 @@
 use crate::float::DumbFloat16;
-use crate::types::{Icon, ScreenTheme, UploadChannel};
-use chrono::{DateTime, Datelike, TimeZone, Timelike};
+// use crate::types::{Icon, ScreenTheme, UploadChannel};
+use crate::types::{Icon, ScreenTheme};
 
 pub trait Arg {
     const SIZE: usize;
@@ -89,12 +89,6 @@ impl_command_abi![
 
     /* SETTER COMMANDS */
 
-    /// setting the system clock
-    fn set_time([28, 3, 0, 0, 0, 15, 0, 0, 165, 56, 0, 10, 0, 1], year_byte1: u8, year_byte2: u8, month: u8, day: u8, hour: u8, minute: u8, second: u8, week_day: u8);
-
-    /// setting the weather icon and current/min/max temperatures
-    fn set_weather([165, 1, 32], icon: Icon, current: u8, low: u8, high: u8);
-
     /// setting the cpu/gpu temp and download rate
     fn set_system_info([165, 1, 64], cpu_temp: u8, gpu_temp: u8, download: DumbFloat16);
 ];
@@ -104,25 +98,22 @@ pub fn generate_time_buffer(year_byte1: u8, year_byte2: u8, month: u8, day: u8, 
 
     let mut data_buffer:[u8; 32] = [0u8; 32];
     let data_buffer_len: usize = 32;
-    let mut intial_data: [u8; 14] = [165, 56, 0, 10, 0, 1, year_byte1, year_byte2, month, day, hour, minute, second, week_day];
+    let intial_data: [u8; 14] = [165, 56, 0, 10, 0, 1, year_byte1, year_byte2, month, day, hour, minute, second, week_day];
     data_buffer[8..22].copy_from_slice(&intial_data);
 
     //here lies some dumbass math they thought would be funny to include 
     //because why not obsfucate your code as much as you can
     //I'm literally calling them magic numbers because they're dumb AF
-    // let mut magic_number_2: i32 = 65535;
-    // for y in 0..data_buffer_len {
-    //     magic_number_2 = magic_number_2 ^ ((data_buffer[y] as i32) << 8);
+    let mut magic_number_1: i32 = 0;
+    for x in 9..data_buffer_len {
+        magic_number_1 += data_buffer[x] as i32
+    }
+    magic_number_1 = magic_number_1 ^ 255;
+    data_buffer[22] = (magic_number_1 & 255) as u8;
 
-    //     for z in 0..8 {
-    //         if (magic_number_2 & 32768) > 0 {
-    //             magic_number_2 = (magic_number_2 << 1) ^ 4129;
-    //         } else {
-    //             magic_number_2 = magic_number_2 << 1;
-    //         }
-    //         magic_number_2 = magic_number_2 & 65535;
-    //     }
-    // }
+    data_buffer[0] = 28;
+    data_buffer[1] = 3;
+    data_buffer[5] = 15;
 
     let magic_number_2: i32 = magic_checksum_processing(data_buffer, data_buffer_len);
 
@@ -144,11 +135,11 @@ pub fn generate_weather_buffer(icon: Icon, current: f32, low: f32, high: f32) ->
     // O = high
     // q = magic_temp_high_1
 
-    let mut magic_temp_current_1 = magic_temp_processing(current);
+    let magic_temp_current_1 = magic_temp_processing(current);
 
-    let mut magic_temp_low_1 = magic_temp_processing(low);
+    let magic_temp_low_1 = magic_temp_processing(low);
 
-    let mut magic_temp_high_1 = magic_temp_processing(high);
+    let magic_temp_high_1 = magic_temp_processing(high);
 
     // let time = chrono::Local::now();
     // let cur_hours = time.day();
@@ -193,8 +184,6 @@ pub fn generate_weather_buffer(icon: Icon, current: f32, low: f32, high: f32) ->
 
     data_buffer[7] = (magic_number_2 >> 8) as u8;
     data_buffer[6] = magic_number_2 as u8;
-
-    println!("{:x?}", data_buffer);
 
     let mut final_buffer: [u8; 33] = [0u8; 33];
     final_buffer[0] = 0x0;
