@@ -8,7 +8,7 @@ license = "MIT"
 edition = "2021"
 
 [workspace]
-members = ["zoom65v3"]
+members = ["zoom65v3", "zoomtkldyna"]
 
 [workspace.dependencies]
 chrono = "0.4.38" # local time
@@ -16,6 +16,7 @@ chrono = "0.4.38" # local time
 [dependencies]
 # keyboard management
 zoom65v3 = { path = "./zoom65v3", version = "0.3" }
+zoomtkldyna = { path = "./zoomtkldyna", version = "0.1" }
 
 # runtime and scaffalding
 tokio = { version = "1.41", features = ["full"] }

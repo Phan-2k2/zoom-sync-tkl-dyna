@@ -1,9 +1,9 @@
 [package]
-name = "zoom65v3"
-version = "0.3.0"
-description = "Reverse engineered hidapi bindings to zoom65v3 screen modules"
-repository = "https://github.com/ozwaldorf/zoom-sync"
-authors = [ "ozwaldorf <self@ossian.dev>" ]
+name = "zoomtkldyna"
+version = "0.1.0"
+description = "Reverse engineered hidapi bindings to zoomtkldyna screen modules"
+repository = "https://github.com/Phan-2k2/zoom-sync-tkl-dyna"
+authors = [ "Phan-2k2" ]
 license = "MIT"
 edition = "2021"
 

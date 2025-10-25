@@ -4,10 +4,10 @@ use hidapi::HidError;
 
 use crate::abi::Arg;
 
-pub type Zoom65Result<T> = Result<T, Zoom65Error>;
+pub type ZoomTklDynaResult<T> = Result<T, ZoomTklDynaError>;
 
 #[derive(thiserror::Error)]
-pub enum Zoom65Error {
+pub enum ZoomTklDynaError {
     #[error("failed to find device")]
     DeviceNotFound,
     #[error("firmware version is unknown. open an issue for support")]
@@ -22,7 +22,7 @@ pub enum Zoom65Error {
     Hid(#[from] HidError),
 }
 
-impl std::fmt::Debug for Zoom65Error {
+impl std::fmt::Debug for ZoomTklDynaError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{self}")
     }
