@@ -191,6 +191,37 @@ pub fn generate_weather_buffer(icon: Icon, current: f32, low: f32, high: f32) ->
     final_buffer
 }
 
+pub fn generate_sysinfo_buffer(cpu_temp: u8, gpu_temp: u8, download: DumbFloat16) -> [u8; 33] {
+    let mut data_buffer = [0; 32];
+    let data_buffer_len = data_buffer.len();
+    data_buffer[8] = 165;
+    data_buffer[9] = 255;
+    data_buffer[10] = 0;
+    data_buffer[11] = 11;
+    data_buffer[14] = cpu_temp;
+    data_buffer[16] = gpu_temp;
+    data_buffer[18] = 61; //or 61? I think this is SSD temp
+    data_buffer[19] = 2; // This is fan rpm, 1 = 256, 2 = 512, the next one adds on.
+    data_buffer[20] = 0; // Fan RPM modifier, +1 to above.
+    data_buffer[21] = 2; // This is network speed, 1 = 25.6, 2 = 51.2, the next one adds on.
+    data_buffer[22] = 2; // Network speed modifier in 0.1 increments
+    data_buffer[23] = 255;
+
+    data_buffer[0] = 28;
+    data_buffer[1] = 2;
+    data_buffer[5] = 16;
+
+    let magic_number_2 = magic_checksum_processing(data_buffer, data_buffer_len);
+
+    data_buffer[7] = (magic_number_2 >> 8) as u8;
+    data_buffer[6] = magic_number_2 as u8;
+
+    let mut final_buffer: [u8; 33] = [0u8; 33];
+    final_buffer[0] = 0x0;
+    final_buffer[1..33].copy_from_slice(&data_buffer);
+    final_buffer
+}
+
 fn magic_temp_processing (temp : f32) -> i32 {
     let mut return_value: i32 = 0;
     if temp > 0.0 {
