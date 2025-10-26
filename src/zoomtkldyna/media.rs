@@ -7,6 +7,7 @@ use image::{imageops, DynamicImage, Frames, GenericImageView, ImageBuffer, Pixel
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 /// Encode an square image as rgb565 with an 8 bit alpha channel
+#[allow(dead_code)]
 pub fn encode_image(image: DynamicImage, background: [u8; 3], nearest: bool) -> Option<Vec<u8>> {
     print!("resizing and encoding image ... ");
     stdout().flush().unwrap();
@@ -48,6 +49,7 @@ pub fn encode_image(image: DynamicImage, background: [u8; 3], nearest: bool) -> 
 }
 
 /// Re-encode animation frames as a 111x111 gif
+#[allow(dead_code)]
 pub fn encode_gif(frames: Frames, background: [u8; 3], nearest: bool) -> Option<Vec<u8>> {
     let frames = frames.collect_frames().ok()?;
     let len = frames.len();

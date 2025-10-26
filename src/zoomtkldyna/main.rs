@@ -1,22 +1,23 @@
 use std::error::Error;
-use std::fmt::{Debug, Display};
-use std::io::{stdout, Seek, Write};
-use std::path::PathBuf;
-use std::str::FromStr;
+use std::fmt::{Debug};
+// use std::fmt::{Debug, Display};
+// use std::io::{stdout, Seek, Write};
+// use std::path::PathBuf;
+// use std::str::FromStr;
 use std::time::Duration;
 
 use bpaf::{Bpaf, Parser};
 use chrono::{DurationRound, TimeDelta};
 use either::Either;
 use futures::future::OptionFuture;
-use image::codecs::gif::GifDecoder;
-use image::codecs::png::PngDecoder;
-use image::codecs::webp::WebPDecoder;
-use image::AnimationDecoder;
-use tokio_stream::StreamExt;
+// use image::codecs::gif::GifDecoder;
+// use image::codecs::png::PngDecoder;
+// use image::codecs::webp::WebPDecoder;
+// use image::AnimationDecoder;
+// use tokio_stream::StreamExt;
 
 use crate::info::{apply_system, cpu_mode, gpu_mode, system_args, CpuMode, GpuMode, SystemArgs};
-use crate::media::{encode_gif, encode_image};
+// use crate::media::{encode_gif, encode_image};
 use crate::screen::{apply_screen, screen_args, screen_args_with_reactive, ScreenArgs};
 use crate::weather::{apply_weather, weather_args, WeatherArgs};
 
@@ -102,61 +103,61 @@ enum SetCommand {
     // Clear,
 }
 
-#[derive(Clone, Debug, Bpaf)]
-enum SetMediaArgs {
-    Set {
-        /// Use nearest neighbor interpolation when resizing, otherwise uses gaussian
-        #[bpaf(short('n'), long("nearest"))]
-        nearest: bool,
-        /// Optional background color for transparent images
-        #[bpaf(
-            short,
-            long,
-            fallback(Color([0; 3])),
-            display_fallback,
-        )]
-        bg: Color,
-        /// Path to image to re-encode and upload
-        #[bpaf(positional("PATH"), guard(|p| p.exists(), "file not found"))]
-        path: PathBuf,
-    },
-    /// Delete the content, resetting back to the default.
-    #[bpaf(command)]
-    Clear,
-}
+// #[derive(Clone, Debug, Bpaf)]
+// enum SetMediaArgs {
+//     Set {
+//         /// Use nearest neighbor interpolation when resizing, otherwise uses gaussian
+//         #[bpaf(short('n'), long("nearest"))]
+//         nearest: bool,
+//         /// Optional background color for transparent images
+//         #[bpaf(
+//             short,
+//             long,
+//             fallback(Color([0; 3])),
+//             display_fallback,
+//         )]
+//         bg: Color,
+//         /// Path to image to re-encode and upload
+//         #[bpaf(positional("PATH"), guard(|p| p.exists(), "file not found"))]
+//         path: PathBuf,
+//     },
+//     /// Delete the content, resetting back to the default.
+//     #[bpaf(command)]
+//     Clear,
+// }
 
-/// Utility for easily parsing hex colors from bpaf
-#[derive(Debug, Clone, Hash)]
-struct Color(pub [u8; 3]);
-impl Display for Color {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let [r, g, b] = self.0;
-        f.write_str(&format!("#{r:02x}{g:02x}{b:02x}"))
-    }
-}
-impl FromStr for Color {
-    type Err = String;
-    fn from_str(code: &str) -> Result<Self, Self::Err> {
-        // parse hex string into rgb
-        let mut hex = (*code).trim_start_matches('#').to_string();
-        match hex.len() {
-            3 => {
-                // Extend 3 character hex colors
-                hex = hex.chars().flat_map(|a| [a, a]).collect();
-            },
-            6 => {},
-            l => return Err(format!("Invalid hex length for {code}: {l}")),
-        }
-        if let Ok(channel_bytes) = u32::from_str_radix(&hex, 16) {
-            let r = ((channel_bytes >> 16) & 0xFF) as u8;
-            let g = ((channel_bytes >> 8) & 0xFF) as u8;
-            let b = (channel_bytes & 0xFF) as u8;
-            Ok(Self([r, g, b]))
-        } else {
-            Err(format!("Invalid hex color: {code}"))
-        }
-    }
-}
+// /// Utility for easily parsing hex colors from bpaf
+// #[derive(Debug, Clone, Hash)]
+// struct Color(pub [u8; 3]);
+// impl Display for Color {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         let [r, g, b] = self.0;
+//         f.write_str(&format!("#{r:02x}{g:02x}{b:02x}"))
+//     }
+// }
+// impl FromStr for Color {
+//     type Err = String;
+//     fn from_str(code: &str) -> Result<Self, Self::Err> {
+//         // parse hex string into rgb
+//         let mut hex = (*code).trim_start_matches('#').to_string();
+//         match hex.len() {
+//             3 => {
+//                 // Extend 3 character hex colors
+//                 hex = hex.chars().flat_map(|a| [a, a]).collect();
+//             },
+//             6 => {},
+//             l => return Err(format!("Invalid hex length for {code}: {l}")),
+//         }
+//         if let Ok(channel_bytes) = u32::from_str_radix(&hex, 16) {
+//             let r = ((channel_bytes >> 16) & 0xFF) as u8;
+//             let g = ((channel_bytes >> 8) & 0xFF) as u8;
+//             let b = (channel_bytes & 0xFF) as u8;
+//             Ok(Self([r, g, b]))
+//         } else {
+//             Err(format!("Invalid hex color: {code}"))
+//         }
+//     }
+// }
 
 #[derive(Clone, Debug, Bpaf)]
 #[bpaf(options, version, descr(env!("CARGO_PKG_DESCRIPTION")))]
@@ -219,42 +220,42 @@ async fn run(
             println!("set screen");
         }
     }
-    #[cfg(not(target_os = "linux"))]
-    let mut reactive_stream: Option<
-        Box<
-            dyn tokio_stream::Stream<Item = Result<Result<(), std::io::Error>, Box<dyn Error>>>
-                + Unpin,
-        >,
-    > = None;
-    #[cfg(target_os = "linux")]
-    let mut reactive_stream = args.screen_args.and_then(|args| match args {
-        #[cfg(target_os = "linux")]
-        ScreenArgs::Reactive => {
-            println!("initializing reactive mode");
-            keyboard
-                .set_screen(zoomtkldyna::types::LogoOffset::Image.pos())
-                .unwrap();
-            let stream = evdev::enumerate().find_map(|(_, device)| {
-                device
-                    .name()
-                    .unwrap()
-                    .contains("Zoom TKL Dyna Keyboard")
-                    .then_some(
-                        device
-                            .into_event_stream()
-                            .map(|s| Box::pin(s.timeout(Duration::from_millis(500))))
-                            .ok(),
-                    )
-                    .flatten()
-            });
-            if stream.is_none() {
-                eprintln!("warning: couldn't find/access ev device");
-            }
-            stream
-        },
-        _ => None,
-    });
-    let mut is_reactive_running = false;
+    // #[cfg(not(target_os = "linux"))]
+    // let mut reactive_stream: Option<
+    //     Box<
+    //         dyn tokio_stream::Stream<Item = Result<Result<(), std::io::Error>, Box<dyn Error>>>
+    //             + Unpin,
+    //     >,
+    // > = None;
+    // #[cfg(target_os = "linux")]
+    // let mut reactive_stream = args.screen_args.and_then(|args| match args {
+    //     #[cfg(target_os = "linux")]
+    //     ScreenArgs::Reactive => {
+    //         println!("initializing reactive mode");
+    //         keyboard
+    //             .set_screen(zoomtkldyna::types::LogoOffset::Image.pos())
+    //             .unwrap();
+    //         let stream = evdev::enumerate().find_map(|(_, device)| {
+    //             device
+    //                 .name()
+    //                 .unwrap()
+    //                 .contains("Zoom TKL Dyna Keyboard")
+    //                 .then_some(
+    //                     device
+    //                         .into_event_stream()
+    //                         .map(|s| Box::pin(s.timeout(Duration::from_millis(500))))
+    //                         .ok(),
+    //                 )
+    //                 .flatten()
+    //         });
+    //         if stream.is_none() {
+    //             eprintln!("warning: couldn't find/access ev device");
+    //         }
+    //         stream
+    //     },
+    //     _ => None,
+    // });
+    // let mut is_reactive_running = false;
 
     // Sync time immediately, and if 12hr time is enabled, resync every next hour
     apply_time(&mut keyboard, args._12hr)?;

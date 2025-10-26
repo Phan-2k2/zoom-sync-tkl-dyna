@@ -1,4 +1,5 @@
 /// Checksum function used for media uploads
+#[allow(dead_code)]
 pub fn checksum(data: &[u8]) -> [u8; 4] {
     const A: isize = 4294967295;
     let mut val = A;

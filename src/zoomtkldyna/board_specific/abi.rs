@@ -1,7 +1,9 @@
 use crate::board_specific::float::DumbFloat16;
-use crate::board_specific::types::{Icon, ScreenTheme, ZoomTklDynaError};
+// use crate::board_specific::types::{Icon, ScreenTheme, ZoomTklDynaError};
+use crate::board_specific::types::{Icon};
 use crate::screen::ScreenArgs;
 
+#[allow(dead_code)]
 pub trait Arg {
     const SIZE: usize;
     fn to_bytes(&self) -> Vec<u8>;
@@ -20,6 +22,24 @@ impl Arg for u32 {
         self.to_be_bytes().to_vec()
     }
 }
+
+// /// testing function, used for debugging
+// pub fn generate_test_buffer() -> [u8; 33] {
+
+//     let mut data_buffer = [0; 32];
+//     let data_buffer_len = data_buffer.len();
+
+
+//     let magic_number_2: i32 = magic_checksum_processing(data_buffer, data_buffer_len);
+
+//     data_buffer[7] = (magic_number_2 >> 8) as u8;
+//     data_buffer[6] = magic_number_2 as u8;
+
+//     let mut final_buffer: [u8; 33] = [0u8; 33];
+//     final_buffer[0] = 0x0;
+//     final_buffer[1..33].copy_from_slice(&data_buffer);
+//     final_buffer
+// }
 
 //trying to replicate this bs as best I can because wtf
 pub fn generate_time_buffer(year_byte1: u8, year_byte2: u8, month: u8, day: u8, hour: u8, minute: u8, second: u8, week_day: u8) -> [u8; 33] {

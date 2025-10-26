@@ -1,12 +1,15 @@
-//! High level hidapi abstraction for interacting with zoom65v3 screen modules
+//! High level hidapi abstraction for interacting with zoomtkldyna screen modules
 
-use std::{sync::{LazyLock, RwLock}, thread::sleep, time::Duration};
+// use std::{sync::{LazyLock, RwLock}, thread::sleep, time::Duration};
+use std::{sync::{LazyLock, RwLock}};
 
-use crate::{board_specific::checksum::checksum, screen::ScreenArgs};
+// use crate::{board_specific::checksum::checksum, screen::ScreenArgs};
+use crate::{screen::ScreenArgs};
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
 use crate::board_specific::float::DumbFloat16;
 use hidapi::{HidApi, HidDevice};
-use crate::board_specific::types::{ScreenPosition, ScreenTheme, UploadChannel, ZoomTklDynaResult, Icon, ZoomTklDynaError};
+// use crate::board_specific::types::{ScreenPosition, ScreenTheme, UploadChannel, ZoomTklDynaResult, Icon, ZoomTklDynaError};
+use crate::board_specific::types::{ZoomTklDynaResult, Icon, ZoomTklDynaError};
 use crate::board_specific::abi;
 
 pub mod consts {
@@ -99,7 +102,7 @@ impl ZoomTklDyna {
     /// Update the keyboards current weather report
     #[inline(always)]
     pub fn set_weather(&mut self, icon: Icon, current: f32, low: f32, high: f32) -> ZoomTklDynaResult<()> {
-        let mut res: Vec<u8> = self.execute(abi::generate_weather_buffer(icon, current, low, high))?;
+        let res: Vec<u8> = self.execute(abi::generate_weather_buffer(icon, current, low, high))?;
         (res[1] == 1 && res[0] == 28)
             .then_some(())
             .ok_or(ZoomTklDynaError::UpdateCommandFailed)

@@ -11,9 +11,11 @@ pub enum ScreenArgs {
     Up,
     /// Move the screen down
     Down,
-    /// Switch the screen offset
+    /// Enter the menu
     Enter,
+    /// Return from the menu
     Return,
+    /// Reset themes, gifs and images
     Reset,
     #[cfg(target_os = "linux")]
     /// Reactive image/gif mode
