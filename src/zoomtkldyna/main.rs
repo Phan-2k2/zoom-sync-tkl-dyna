@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::fmt::{Debug};
+use std::thread::sleep;
 // use std::fmt::{Debug, Display};
 // use std::io::{stdout, Seek, Write};
 // use std::path::PathBuf;
@@ -278,12 +279,13 @@ async fn run(
     let mut system_interval = tokio::time::interval(args.refresh_system.into());
 
     loop {
+        sleep(Duration::new(1, 0));
         tokio::select! {
             Some(_) = OptionFuture::from(time_interval.as_mut().map(|i| i.tick())) => {
                 apply_time(&mut keyboard, args._12hr)?;
             },
             _ = weather_interval.tick() => {
-                apply_weather(&mut keyboard, &mut args.weather_args, args.farenheit).await?
+                apply_weather(&mut keyboard, &mut args.weather_args, args.farenheit).await?;
             },
             _ = system_interval.tick() => {
                 if let SystemArgs::Enabled { download, .. } = args.system_args {
@@ -325,7 +327,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     &gpu_mode.either(),
                     download,
                 ),
-                SetCommand::Screen(args) => apply_screen(&args, &mut keyboard),
+                SetCommand::Screen(args) => {apply_screen(&args, &mut keyboard)},
                 // SetCommand::Image(args) => match args {
                 //     SetMediaArgs::Set { nearest, path, bg } => {
                 //         let image = ::image::open(path)?;

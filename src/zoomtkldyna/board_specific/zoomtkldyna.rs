@@ -54,11 +54,13 @@ impl ZoomTklDyna {
     /// Internal method to execute a payload and read the response
     fn execute(&mut self, payload: [u8; 33]) -> ZoomTklDynaResult<Vec<u8>> {
         self.device.write(&payload)?;
-        println!("Output buffer: {:x?}", payload);
         let len = self.device.read(&mut self.buf)?;
         let slice = &self.buf[0..len];
-        println!("Response: {:x?}", slice);
         assert!(slice[0] == payload[1]);
+        // the tkl dyna tends to respond twice to stuff, this call is made to clear the buffer
+        // so that the next call doesn't come up incorrectly.
+        let mut dummy_buffer : [u8; 64] = [0 ; 64];
+        _ = self.device.read(&mut dummy_buffer)?;
         Ok(slice.to_vec())
     }
 
