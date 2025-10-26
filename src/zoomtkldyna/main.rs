@@ -1,6 +1,7 @@
-#![windows_subsystem = "windows"]
+// #![windows_subsystem = "windows"]
 use std::error::Error;
 use std::fmt::{Debug};
+use std::thread;
 // use std::fmt::{Debug, Display};
 // use std::io::{stdout, Seek, Write};
 // use std::path::PathBuf;
@@ -11,6 +12,15 @@ use bpaf::{Bpaf, Parser};
 use chrono::{DurationRound, TimeDelta};
 use either::Either;
 use futures::future::OptionFuture;
+use tray_icon::{
+    menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem},
+    TrayIcon, TrayIconBuilder, TrayIconEvent, TrayIconEventReceiver,
+};
+use winit::{
+    application::ApplicationHandler,
+    event::Event,
+    event_loop::{ControlFlow, EventLoop, EventLoopBuilder},
+};
 // use image::codecs::gif::GifDecoder;
 // use image::codecs::png::PngDecoder;
 // use image::codecs::webp::WebPDecoder;
@@ -174,6 +184,79 @@ enum Cli {
     },
 }
 
+struct Application {
+    tray_icon: Option<TrayIcon>,
+}
+
+impl Application {
+    fn new() -> Application {
+        Application { tray_icon: None }
+    }
+
+    fn new_tray_icon() -> TrayIcon {
+        let icon = tray_icon::Icon::from_path("./keyboard_5643.ico", None).unwrap();
+
+
+        TrayIconBuilder::new()
+            .with_menu(Box::new(Self::new_tray_menu()))
+            .with_tooltip("Zoom Sync - TKL DYNA")
+            .with_icon(icon)
+            .with_title("x")
+            .build()
+            .unwrap()
+    }
+
+    fn new_tray_menu() -> Menu {
+        let menu = Menu::new();
+        let item1 = MenuItem::new("Bananas", true, None);
+        if let Err(err) = menu.append(&item1) {
+            println!("{err:?}");
+        }
+        menu
+    }
+}
+
+impl ApplicationHandler<UserEvent> for Application {
+    fn resumed(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop) {}
+
+    fn window_event(
+        &mut self,
+        _event_loop: &winit::event_loop::ActiveEventLoop,
+        _window_id: winit::window::WindowId,
+        _event: winit::event::WindowEvent,
+    ) {
+    }
+
+    fn new_events(
+        &mut self,
+        _event_loop: &winit::event_loop::ActiveEventLoop,
+        cause: winit::event::StartCause,
+    ) {
+        // We create the icon once the event loop is actually running
+        // to prevent issues like https://github.com/tauri-apps/tray-icon/issues/90
+        if winit::event::StartCause::Init == cause {
+            #[cfg(not(target_os = "linux"))]
+            {
+                self.tray_icon = Some(Self::new_tray_icon());
+            }
+
+            // We have to request a redraw here to have the icon actually show up.
+            // Winit only exposes a redraw method on the Window so we use core-foundation directly.
+            #[cfg(target_os = "macos")]
+            unsafe {
+                use objc2_core_foundation::{CFRunLoopGetMain, CFRunLoopWakeUp};
+
+                let rl = CFRunLoopGetMain().unwrap();
+                CFRunLoopWakeUp(&rl);
+            }
+        }
+    }
+
+    fn user_event(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop, event: UserEvent) {
+        println!("{event:?}");
+    }
+}
+
 pub fn apply_time(keyboard: &mut ZoomTklDyna, _12hr: bool) -> Result<(), Box<dyn Error>> {
     let time = chrono::Local::now();
     keyboard
@@ -196,7 +279,7 @@ async fn refresh(mut args: RefreshArgs) -> Result<(), Box<dyn Error>> {
     loop {
         if let Err(e) = run(&mut args, &mut cpu, &gpu).await {
             eprintln!("error: {e}\nreconnecting in {} seconds...", args.retry);
-            tokio::time::sleep(args.retry.into()).await;
+            std::thread::sleep(args.retry.into());
         }
     }
 }
@@ -302,9 +385,13 @@ async fn run(
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
-    let args = cli().run();
+#[derive(Debug)]
+enum UserEvent {
+    TrayIconEvent(tray_icon::TrayIconEvent),
+    MenuEvent(tray_icon::menu::MenuEvent),
+}
+
+async fn parse_commands (args:Cli) -> Result<(), Box<dyn Error>>{
     match args {
         Cli::Run(args) => refresh(args).await,
         Cli::Set { set_command } => {
@@ -412,6 +499,31 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
         },
     }
+
+}
+
+fn main() {
+    let args = cli().run();
+
+    // set up event loop for background running task
+    let event_loop = EventLoop::<UserEvent>::with_user_event().build().unwrap();
+    let proxy = event_loop.create_proxy();
+    TrayIconEvent::set_event_handler(Some(move |event| {
+        proxy.send_event(UserEvent::TrayIconEvent(event));
+    }));
+
+    let proxy = event_loop.create_proxy();
+    MenuEvent::set_event_handler(Some(move |event| {
+        proxy.send_event(UserEvent::MenuEvent(event));
+    }));
+
+    let menu_channel = MenuEvent::receiver();
+    let tray_channel = TrayIconEvent::receiver();
+
+    thread::spawn(|| {
+        parse_commands(args).await?;
+    });
+    
 }
 
 #[cfg(test)]
