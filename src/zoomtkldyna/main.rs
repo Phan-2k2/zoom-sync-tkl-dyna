@@ -1,6 +1,6 @@
+#![windows_subsystem = "windows"]
 use std::error::Error;
 use std::fmt::{Debug};
-use std::thread::sleep;
 // use std::fmt::{Debug, Display};
 // use std::io::{stdout, Seek, Write};
 // use std::path::PathBuf;
@@ -279,7 +279,7 @@ async fn run(
     let mut system_interval = tokio::time::interval(args.refresh_system.into());
 
     loop {
-        sleep(Duration::new(1, 0));
+        println!("new loop!");
         tokio::select! {
             Some(_) = OptionFuture::from(time_interval.as_mut().map(|i| i.tick())) => {
                 apply_time(&mut keyboard, args._12hr)?;

@@ -44,4 +44,3 @@ sysinfo = "0.33.1" # cpu temp
 
 [target.'cfg(target_os = "linux")'.dependencies]
 evdev = { version = "0.12.2", features = ["tokio"] } # reading keypress events on linux
-
