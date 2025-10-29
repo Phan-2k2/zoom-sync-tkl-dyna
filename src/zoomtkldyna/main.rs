@@ -279,7 +279,6 @@ async fn run(
     let mut system_interval = tokio::time::interval(args.refresh_system.into());
 
     loop {
-        println!("new loop!");
         tokio::select! {
             Some(_) = OptionFuture::from(time_interval.as_mut().map(|i| i.tick())) => {
                 apply_time(&mut keyboard, args._12hr)?;
