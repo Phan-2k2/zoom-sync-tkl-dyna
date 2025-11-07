@@ -1,10 +1,8 @@
 use std::error::Error;
 
 use bpaf::{Bpaf, Parser};
-// use zoom65v3::types::ScreenPosition;
-// use zoom65v3::Zoom65v3;
-use zoomtkldyna::types::ScreenPosition;
-use zoomtkldyna::ZoomTklDyna;
+use crate::board_specific::types::ScreenPosition;
+use crate::Zoom65v3;
 
 /// Screen options:
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Bpaf)]
@@ -42,7 +40,7 @@ pub fn screen_args_with_reactive() -> impl Parser<ScreenArgs> {
     }
 }
 
-pub fn apply_screen(args: &ScreenArgs, keyboard: &mut ZoomTklDyna) -> Result<(), Box<dyn Error>> {
+pub fn apply_screen(args: &ScreenArgs, keyboard: &mut Zoom65v3) -> Result<(), Box<dyn Error>> {
     match args {
         ScreenArgs::Screen(pos) => keyboard.set_screen(*pos)?,
         ScreenArgs::Up => keyboard.screen_up()?,

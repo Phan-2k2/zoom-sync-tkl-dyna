@@ -1,19 +1,16 @@
-//! High level hidapi abstraction for interacting with zoom65v3 screen modules
+//! High level hidapi abstraction for interacting with zoomtkldyna screen modules
 
-use std::{sync::{LazyLock, RwLock}, thread::sleep, time::Duration};
+// use std::{sync::{LazyLock, RwLock}, thread::sleep, time::Duration};
+use std::{sync::{LazyLock, RwLock}};
 
-use checksum::checksum;
+// use crate::{board_specific::checksum::checksum, screen::ScreenArgs};
+use crate::{screen::ScreenArgs};
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
-use float::DumbFloat16;
+use crate::board_specific::float::DumbFloat16;
 use hidapi::{HidApi, HidDevice};
-use types::{ScreenPosition, ScreenTheme, UploadChannel, ZoomTklDynaResult};
-
-use crate::types::{Icon, ZoomTklDynaError};
-
-pub mod abi;
-pub mod checksum;
-pub mod float;
-pub mod types;
+// use crate::board_specific::types::{ScreenPosition, ScreenTheme, UploadChannel, ZoomTklDynaResult, Icon, ZoomTklDynaError};
+use crate::board_specific::types::{ZoomTklDynaResult, Icon, ZoomTklDynaError};
+use crate::board_specific::abi;
 
 pub mod consts {
     pub const ZOOMTKLDYNA_VENDOR_ID: u16 = 0x5542;
@@ -26,7 +23,7 @@ pub mod consts {
 static API: LazyLock<RwLock<HidApi>> =
     LazyLock::new(|| RwLock::new(HidApi::new().expect("failed to init hidapi")));
 
-/// High level abstraction for managing a zoom65 v3 keyboard
+/// High level abstraction for managing a zoom tkl dyna keyboard
 pub struct ZoomTklDyna {
     pub device: HidDevice,
     buf: [u8; 64],
@@ -57,87 +54,23 @@ impl ZoomTklDyna {
     /// Internal method to execute a payload and read the response
     fn execute(&mut self, payload: [u8; 33]) -> ZoomTklDynaResult<Vec<u8>> {
         self.device.write(&payload)?;
-        println!("Output buffer: {:x?}", payload);
         let len = self.device.read(&mut self.buf)?;
         let slice = &self.buf[0..len];
-        println!("Response: {:x?}", slice);
         assert!(slice[0] == payload[1]);
+        // the tkl dyna tends to respond twice to stuff, this call is made to clear the buffer
+        // so that the next call doesn't come up incorrectly.
+        let mut dummy_buffer : [u8; 64] = [0 ; 64];
+        _ = self.device.read(&mut dummy_buffer)?;
         Ok(slice.to_vec())
-    }
-
-    /// Set the screen theme. Will reset the screen back to the meletrix logo
-    #[inline(always)]
-    pub fn screen_theme(&mut self, theme: ScreenTheme) -> ZoomTklDynaResult<()> {
-        let res = self.execute(abi::screen_theme(theme))?;
-        (res[1] == 1 && res[2] == 1)
-            .then_some(())
-            .ok_or(ZoomTklDynaError::UpdateCommandFailed)
     }
 
     /// Increment the screen position
     #[inline(always)]
-    pub fn screen_up(&mut self) -> ZoomTklDynaResult<()> {
-        let res = self.execute(abi::screen_up())?;
-        (res[1] == 1 && res[2] == 1)
+    pub fn control_screen(&mut self, command : ScreenArgs) -> ZoomTklDynaResult<()> {
+        let res: Vec<u8> = self.execute(abi::generate_screen_control_buffer(command))?;
+        (res[1] == 1 && res[0] == 28)
             .then_some(())
             .ok_or(ZoomTklDynaError::UpdateCommandFailed)
-    }
-
-    /// Decrement the screen position
-    #[inline(always)]
-    pub fn screen_down(&mut self) -> ZoomTklDynaResult<()> {
-        let res = self.execute(abi::screen_down())?;
-        (res[1] == 1 && res[2] == 1)
-            .then_some(())
-            .ok_or(ZoomTklDynaError::UpdateCommandFailed)
-    }
-
-    /// Switch the active screen
-    #[inline(always)]
-    pub fn screen_switch(&mut self) -> ZoomTklDynaResult<()> {
-        let res = self.execute(abi::screen_switch())?;
-        (res[1] == 1 && res[2] == 1)
-            .then_some(())
-            .ok_or(ZoomTklDynaError::UpdateCommandFailed)
-    }
-
-    /// Reset the screen back to the meletrix logo
-    #[inline(always)]
-    pub fn reset_screen(&mut self) -> ZoomTklDynaResult<()> {
-        let res = self.execute(abi::reset_screen())?;
-        (res[1] == 1 && res[2] == 1)
-            .then_some(())
-            .ok_or(ZoomTklDynaError::UpdateCommandFailed)
-    }
-
-    /// Set the screen to a specific position and offset
-    pub fn set_screen(&mut self, position: ScreenPosition) -> ZoomTklDynaResult<()> {
-        let (y, x) = position.to_directions();
-
-        // Back to default
-        self.reset_screen()?;
-
-        // Move screen up or down
-        match y {
-            y if y < 0 => {
-                for _ in 0..y.abs() {
-                    self.screen_up()?;
-                }
-            },
-            y if y > 0 => {
-                for _ in 0..y.abs() {
-                    self.screen_down()?;
-                }
-            },
-            _ => {},
-        }
-
-        // Switch screen to offset
-        for _ in 0..x {
-            self.screen_switch()?;
-        }
-
-        Ok(())
     }
 
     /// Update the keyboards current time.
@@ -171,7 +104,7 @@ impl ZoomTklDyna {
     /// Update the keyboards current weather report
     #[inline(always)]
     pub fn set_weather(&mut self, icon: Icon, current: f32, low: f32, high: f32) -> ZoomTklDynaResult<()> {
-        let mut res: Vec<u8> = self.execute(abi::generate_weather_buffer(icon, current, low, high))?;
+        let res: Vec<u8> = self.execute(abi::generate_weather_buffer(icon, current, low, high))?;
         (res[1] == 1 && res[0] == 28)
             .then_some(())
             .ok_or(ZoomTklDynaError::UpdateCommandFailed)
