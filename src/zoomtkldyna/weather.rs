@@ -102,6 +102,7 @@ pub async fn get_weather(
     Ok((icon, min, max, temp))
 }
 
+#[tokio::main]
 pub async fn apply_weather(
     keyboard: &mut ZoomTklDyna,
     args: &mut WeatherArgs,

@@ -1,16 +1,16 @@
 // #![windows_subsystem = "windows"]
 use std::error::Error;
 use std::fmt::{Debug};
+use std::thread::sleep;
 // use std::fmt::{Debug, Display};
 // use std::io::{stdout, Seek, Write};
 // use std::path::PathBuf;
 // use std::str::FromStr;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use bpaf::{Bpaf, Parser};
-use chrono::{DurationRound, TimeDelta};
+// use chrono::{DurationRound, TimeDelta};
 use either::Either;
-use futures::future::OptionFuture;
 // use image::codecs::gif::GifDecoder;
 // use image::codecs::png::PngDecoder;
 // use image::codecs::webp::WebPDecoder;
@@ -183,7 +183,7 @@ pub fn apply_time(keyboard: &mut ZoomTklDyna, _12hr: bool) -> Result<(), Box<dyn
     Ok(())
 }
 
-async fn refresh(mut args: RefreshArgs) -> Result<(), Box<dyn Error>> {
+fn refresh(mut args: RefreshArgs) -> Result<(), Box<dyn Error>> {
     let mut cpu = match &args.system_args {
         SystemArgs::Disabled => None,
         SystemArgs::Enabled { cpu_mode, .. } => Some(cpu_mode.either()),
@@ -194,14 +194,14 @@ async fn refresh(mut args: RefreshArgs) -> Result<(), Box<dyn Error>> {
     };
 
     loop {
-        if let Err(e) = run(&mut args, &mut cpu, &gpu).await {
+        if let Err(e) = run(&mut args, &mut cpu, &gpu) {
             eprintln!("error: {e}\nreconnecting in {} seconds...", args.retry);
-            tokio::time::sleep(args.retry.into()).await;
+            sleep(args.retry.into());
         }
     }
 }
 
-async fn run(
+fn run(
     args: &mut RefreshArgs,
     cpu: &mut Option<Either<info::CpuTemp, u8>>,
     gpu: &Option<Either<info::GpuTemp, u8>>,
@@ -258,54 +258,53 @@ async fn run(
     // });
     // let mut is_reactive_running = false;
 
-    // Sync time immediately, and if 12hr time is enabled, resync every next hour
+    // Sync time and weather immediately
     apply_time(&mut keyboard, args._12hr)?;
-    let mut time_interval = args._12hr.then_some({
-        let now = chrono::Local::now();
+    apply_weather(&mut keyboard, &mut args.weather_args, args.farenheit)?;
 
-        let delay = now
-            .duration_trunc(TimeDelta::try_minutes(60).unwrap())
-            .unwrap()
-            .timestamp_millis()
-            + 100
-            - now.timestamp_millis();
+    let weather_interval : Duration = args.refresh_weather.into();
+    let system_interval : Duration = args.refresh_system.into();
+    let loop_interval : Duration;
+    if weather_interval > system_interval {
+        loop_interval = system_interval;
+    } else {
+        loop_interval = weather_interval;
+    }
 
-        tokio::time::interval_at(
-            tokio::time::Instant::now() + Duration::from_millis(delay as u64),
-            Duration::from_secs(60 * 60),
-        )
-    });
-    let mut weather_interval = tokio::time::interval(args.refresh_weather.into());
-    let mut system_interval = tokio::time::interval(args.refresh_system.into());
+    let mut weather_since_last_refresh = Instant::now();
+    let mut system_since_last_refresh = Instant::now();
+    let mut time_since_last_refresh = Instant::now();
 
     loop {
-        tokio::select! {
-            Some(_) = OptionFuture::from(time_interval.as_mut().map(|i| i.tick())) => {
-                apply_time(&mut keyboard, args._12hr)?;
-            },
-            _ = weather_interval.tick() => {
-                apply_weather(&mut keyboard, &mut args.weather_args, args.farenheit).await?;
-            },
-            _ = system_interval.tick() => {
-                if let SystemArgs::Enabled { download, .. } = args.system_args {
-                    apply_system(
-                        &mut keyboard,
-                        args.farenheit,
-                        cpu.as_mut().unwrap(),
-                        gpu.as_ref().unwrap(),
-                        download,
-                    )?;
-                }
-            }
+        if (time_since_last_refresh.elapsed() > Duration::from_secs(60)) && args._12hr {
+            apply_time(&mut keyboard, args._12hr)?;
+            time_since_last_refresh = Instant::now();
         }
+        if weather_since_last_refresh.elapsed() > weather_interval {
+            apply_weather(&mut keyboard, &mut args.weather_args, args.farenheit)?;
+            weather_since_last_refresh = Instant::now();
+        }
+        if system_since_last_refresh.elapsed() > system_interval {
+            if let SystemArgs::Enabled { download, .. } = args.system_args {
+                apply_system(
+                    &mut keyboard,
+                    args.farenheit,
+                    cpu.as_mut().unwrap(),
+                    gpu.as_ref().unwrap(),
+                    download,
+                )?;
+            }
+            system_since_last_refresh = Instant::now();
+        }
+
+        sleep(loop_interval);
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     let args = cli().run();
     match args {
-        Cli::Run(args) => refresh(args).await,
+        Cli::Run(args) => refresh(args),
         Cli::Set { set_command } => {
             let mut keyboard = ZoomTklDyna::open()?;
             match set_command {
@@ -313,7 +312,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 SetCommand::Weather {
                     farenheit,
                     mut weather_args,
-                } => apply_weather(&mut keyboard, &mut weather_args, farenheit).await,
+                } => apply_weather(&mut keyboard, &mut weather_args, farenheit),
                 SetCommand::System {
                     farenheit,
                     cpu_mode,
