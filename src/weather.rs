@@ -6,8 +6,10 @@ use bpaf::Bpaf;
 use chrono::Timelike;
 use ipinfo::IpInfo;
 use open_meteo_api::query::OpenMeteo;
-use zoom65v3::types::Icon;
-use zoom65v3::Zoom65v3;
+// use zoom65v3::types::Icon;
+// use zoom65v3::Zoom65v3;
+use zoomtkldyna::types::Icon;
+use zoomtkldyna::ZoomTklDyna;
 
 #[derive(Clone, Debug, Bpaf)]
 #[bpaf(adjacent)]
@@ -44,16 +46,16 @@ pub enum WeatherArgs {
         weather: (),
         /// WMO Index
         #[bpaf(positional("WMO"))]
-        wmo: u8,
+        wmo: i32,
         /// Current temperature
         #[bpaf(positional("CUR"))]
-        current: u8,
+        current: f32,
         /// Minumum temperature
         #[bpaf(positional("MIN"))]
-        min: u8,
+        min: f32,
         /// Maximum temperature
         #[bpaf(positional("MAX"))]
-        max: u8,
+        max: f32,
     },
 }
 
@@ -84,7 +86,7 @@ pub async fn get_weather(
         .await?;
 
     let current = res.current_weather.unwrap();
-    let icon = Icon::from_wmo(current.weathercode as u8, current.is_day == 1.0).unwrap();
+    let icon = Icon::from_wmo(current.weathercode as i32, current.is_day == 1.0).unwrap();
 
     let daily = res.daily.unwrap();
     let mut min = daily.temperature_2m_min.first().unwrap().unwrap();
@@ -102,7 +104,7 @@ pub async fn get_weather(
 }
 
 pub async fn apply_weather(
-    keyboard: &mut Zoom65v3,
+    keyboard: &mut ZoomTklDyna,
     args: &mut WeatherArgs,
     farenheit: bool,
 ) -> Result<(), Box<dyn Error>> {
@@ -128,7 +130,7 @@ pub async fn apply_weather(
                 match get_weather(lat, long, farenheit).await {
                     Ok((icon, min, max, temp)) => {
                         keyboard
-                            .set_weather(icon.clone(), temp as u8, max as u8, min as u8)
+                            .set_weather(icon.clone(), temp, max, min)
                             .map_err(|e| format!("failed to set weather: {e}"))?;
                         println!(
                             "updated weather {{ icon: {icon:?}, current: {temp}, min: {min}, max: {max} }}"

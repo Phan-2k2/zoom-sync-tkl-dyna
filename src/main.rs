@@ -14,7 +14,8 @@ use image::codecs::png::PngDecoder;
 use image::codecs::webp::WebPDecoder;
 use image::AnimationDecoder;
 use tokio_stream::StreamExt;
-use zoom65v3::Zoom65v3;
+// use zoom65v3::Zoom65v3;
+use zoomtkldyna::ZoomTklDyna;
 
 use crate::info::{apply_system, cpu_mode, gpu_mode, system_args, CpuMode, GpuMode, SystemArgs};
 use crate::media::{encode_gif, encode_image};
@@ -90,15 +91,15 @@ enum SetCommand {
     /// Change current screen
     #[bpaf(command, fallback_to_usage)]
     Screen(#[bpaf(external(screen_args))] ScreenArgs),
-    /// Upload static image
-    #[bpaf(command, fallback_to_usage)]
-    Image(#[bpaf(external(set_media_args))] SetMediaArgs),
-    /// Upload animated image (gif/webp/apng)
-    #[bpaf(command, fallback_to_usage)]
-    Gif(#[bpaf(external(set_media_args))] SetMediaArgs),
-    /// Clear all media files
-    #[bpaf(command)]
-    Clear,
+    // /// Upload static image
+    // #[bpaf(command, fallback_to_usage)]
+    // Image(#[bpaf(external(set_media_args))] SetMediaArgs),
+    // /// Upload animated image (gif/webp/apng)
+    // #[bpaf(command, fallback_to_usage)]
+    // Gif(#[bpaf(external(set_media_args))] SetMediaArgs),
+    // /// Clear all media files
+    // #[bpaf(command)]
+    // Clear,
 }
 
 #[derive(Clone, Debug, Bpaf)]
@@ -171,7 +172,7 @@ enum Cli {
     },
 }
 
-pub fn apply_time(keyboard: &mut Zoom65v3, _12hr: bool) -> Result<(), Box<dyn Error>> {
+pub fn apply_time(keyboard: &mut ZoomTklDyna, _12hr: bool) -> Result<(), Box<dyn Error>> {
     let time = chrono::Local::now();
     keyboard
         .set_time(time, _12hr)
@@ -203,7 +204,7 @@ async fn run(
     cpu: &mut Option<Either<info::CpuTemp, u8>>,
     gpu: &Option<Either<info::GpuTemp, u8>>,
 ) -> Result<(), Box<dyn Error>> {
-    let mut keyboard = Zoom65v3::open()?;
+    let mut keyboard = ZoomTklDyna::open()?;
     println!("connected to keyboard");
 
     if let Some(ref args) = args.screen_args {
@@ -231,13 +232,13 @@ async fn run(
         ScreenArgs::Reactive => {
             println!("initializing reactive mode");
             keyboard
-                .set_screen(zoom65v3::types::LogoOffset::Image.pos())
+                .set_screen(zoomtkldyna::types::LogoOffset::Image.pos())
                 .unwrap();
             let stream = evdev::enumerate().find_map(|(_, device)| {
                 device
                     .name()
                     .unwrap()
-                    .contains("Zoom65 v3 Keyboard")
+                    .contains("Zoom TKL Dyna Keyboard")
                     .then_some(
                         device
                             .into_event_stream()
@@ -327,7 +328,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     match args {
         Cli::Run(args) => refresh(args).await,
         Cli::Set { set_command } => {
-            let mut keyboard = Zoom65v3::open()?;
+            let mut keyboard = ZoomTklDyna::open()?;
             match set_command {
                 SetCommand::Time => apply_time(&mut keyboard, false),
                 SetCommand::Weather {
@@ -347,87 +348,87 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     download,
                 ),
                 SetCommand::Screen(args) => apply_screen(&args, &mut keyboard),
-                SetCommand::Image(args) => match args {
-                    SetMediaArgs::Set { nearest, path, bg } => {
-                        let image = ::image::open(path)?;
-                        // re-encode and upload to keyboard
-                        let encoded =
-                            encode_image(image, bg.0, nearest).ok_or("failed to encode image")?;
-                        let len = encoded.len();
-                        let total = len / 24;
-                        let width = total.to_string().len();
-                        keyboard.upload_image(encoded, |i| {
-                            print!("\ruploading {len} bytes ({i:width$}/{total}) ... ");
-                            stdout().flush().unwrap();
-                        })?;
-                        Ok(())
-                    },
-                    SetMediaArgs::Clear => {
-                        keyboard.clear_image()?;
-                        Ok(())
-                    },
-                },
-                SetCommand::Gif(args) => match args {
-                    SetMediaArgs::Set { nearest, path, bg } => {
-                        print!("decoding animation ... ");
-                        stdout().flush().unwrap();
-                        let decoder = image::ImageReader::open(path)?
-                            .with_guessed_format()
-                            .unwrap();
-                        let frames = match decoder.format() {
-                            Some(image::ImageFormat::Gif) => {
-                                // Reset reader and decode gif as an animation
-                                let mut reader = decoder.into_inner();
-                                reader.seek(std::io::SeekFrom::Start(0)).unwrap();
-                                Some(GifDecoder::new(reader)?.into_frames())
-                            },
-                            Some(image::ImageFormat::Png) => {
-                                // Reset reader
-                                let mut reader = decoder.into_inner();
-                                reader.seek(std::io::SeekFrom::Start(0)).unwrap();
-                                let decoder = PngDecoder::new(reader)?;
-                                // If the png contains an apng, decode as an animation
-                                decoder
-                                    .is_apng()?
-                                    .then_some(decoder.apng().unwrap().into_frames())
-                            },
-                            Some(image::ImageFormat::WebP) => {
-                                // Reset reader
-                                let mut reader = decoder.into_inner();
-                                reader.seek(std::io::SeekFrom::Start(0)).unwrap();
-                                let decoder = WebPDecoder::new(reader).unwrap();
-                                // If the webp contains an animation, decode as an animation
-                                decoder.has_animation().then_some(decoder.into_frames())
-                            },
-                            _ => None,
-                        }
-                        .ok_or("failed to decode animation")?;
-                        println!("done");
+                // SetCommand::Image(args) => match args {
+                //     SetMediaArgs::Set { nearest, path, bg } => {
+                //         let image = ::image::open(path)?;
+                //         // re-encode and upload to keyboard
+                //         let encoded =
+                //             encode_image(image, bg.0, nearest).ok_or("failed to encode image")?;
+                //         let len = encoded.len();
+                //         let total = len / 24;
+                //         let width = total.to_string().len();
+                //         keyboard.upload_image(encoded, |i| {
+                //             print!("\ruploading {len} bytes ({i:width$}/{total}) ... ");
+                //             stdout().flush().unwrap();
+                //         })?;
+                //         Ok(())
+                //     },
+                //     SetMediaArgs::Clear => {
+                //         keyboard.clear_image()?;
+                //         Ok(())
+                //     },
+                // },
+                // SetCommand::Gif(args) => match args {
+                //     SetMediaArgs::Set { nearest, path, bg } => {
+                //         print!("decoding animation ... ");
+                //         stdout().flush().unwrap();
+                //         let decoder = image::ImageReader::open(path)?
+                //             .with_guessed_format()
+                //             .unwrap();
+                //         let frames = match decoder.format() {
+                //             Some(image::ImageFormat::Gif) => {
+                //                 // Reset reader and decode gif as an animation
+                //                 let mut reader = decoder.into_inner();
+                //                 reader.seek(std::io::SeekFrom::Start(0)).unwrap();
+                //                 Some(GifDecoder::new(reader)?.into_frames())
+                //             },
+                //             Some(image::ImageFormat::Png) => {
+                //                 // Reset reader
+                //                 let mut reader = decoder.into_inner();
+                //                 reader.seek(std::io::SeekFrom::Start(0)).unwrap();
+                //                 let decoder = PngDecoder::new(reader)?;
+                //                 // If the png contains an apng, decode as an animation
+                //                 decoder
+                //                     .is_apng()?
+                //                     .then_some(decoder.apng().unwrap().into_frames())
+                //             },
+                //             Some(image::ImageFormat::WebP) => {
+                //                 // Reset reader
+                //                 let mut reader = decoder.into_inner();
+                //                 reader.seek(std::io::SeekFrom::Start(0)).unwrap();
+                //                 let decoder = WebPDecoder::new(reader).unwrap();
+                //                 // If the webp contains an animation, decode as an animation
+                //                 decoder.has_animation().then_some(decoder.into_frames())
+                //             },
+                //             _ => None,
+                //         }
+                //         .ok_or("failed to decode animation")?;
+                //         println!("done");
 
-                        // re-encode and upload to keyboard
-                        let encoded = encode_gif(frames, bg.0, nearest)
-                            .ok_or("failed to encode gif image")?;
-                        let len = encoded.len();
-                        let total = len / 24;
-                        let width = total.to_string().len();
-                        keyboard.upload_gif(encoded, |i| {
-                            print!("\ruploading {len} bytes ({i:width$}/{total}) ... ");
-                            stdout().flush().unwrap();
-                        })?;
-                        println!("done");
-                        Ok(())
-                    },
-                    SetMediaArgs::Clear => {
-                        keyboard.clear_gif()?;
-                        Ok(())
-                    },
-                },
-                SetCommand::Clear => {
-                    keyboard.clear_image()?;
-                    keyboard.clear_gif()?;
-                    println!("cleared media");
-                    Ok(())
-                },
+                //         // re-encode and upload to keyboard
+                //         let encoded = encode_gif(frames, bg.0, nearest)
+                //             .ok_or("failed to encode gif image")?;
+                //         let len = encoded.len();
+                //         let total = len / 24;
+                //         let width = total.to_string().len();
+                //         keyboard.upload_gif(encoded, |i| {
+                //             print!("\ruploading {len} bytes ({i:width$}/{total}) ... ");
+                //             stdout().flush().unwrap();
+                //         })?;
+                //         println!("done");
+                //         Ok(())
+                //     },
+                //     SetMediaArgs::Clear => {
+                //         keyboard.clear_gif()?;
+                //         Ok(())
+                //     },
+                // },
+                // SetCommand::Clear => {
+                //     keyboard.clear_image()?;
+                //     keyboard.clear_gif()?;
+                //     println!("cleared media");
+                //     Ok(())
+                // },
             }
         },
     }

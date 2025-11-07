@@ -8,7 +8,8 @@ use either::Either;
 use nvml_wrapper::enum_wrappers::device::TemperatureSensor;
 use nvml_wrapper::{Device, Nvml};
 use sysinfo::{Component, Components};
-use zoom65v3::Zoom65v3;
+// use zoom65v3::Zoom65v3;
+use zoomtkldyna::ZoomTklDyna;
 
 #[derive(Clone, Debug, bpaf::Bpaf)]
 pub enum CpuMode {
@@ -148,7 +149,7 @@ impl CpuTemp {
 }
 
 pub fn apply_system(
-    keyboard: &mut Zoom65v3,
+    keyboard: &mut ZoomTklDyna,
     farenheit: bool,
     cpu: &mut Either<CpuTemp, u8>,
     gpu: &Either<GpuTemp, u8>,
