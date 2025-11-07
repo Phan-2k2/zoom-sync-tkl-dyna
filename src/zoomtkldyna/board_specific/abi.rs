@@ -136,12 +136,13 @@ pub fn generate_weather_buffer(icon: Icon, current: f32, low: f32, high: f32) ->
 }
 
 // A bunch of these values 
-pub fn generate_sysinfo_buffer(cpu_temp: u8, gpu_temp: u8, speed_fan: f32, download: f32) -> [u8; 33] {
+pub fn generate_sysinfo_buffer(cpu_temp: u8, gpu_temp: u32, speed_fan: u32, download: f32) -> [u8; 33] {
     let mut data_buffer = [0; 32];
     let data_buffer_len = data_buffer.len();
 
     let download_array = ((download * 10.0) as u32).to_le_bytes();
-    let speed_fan_array = ((speed_fan) as u32).to_le_bytes();
+    let speed_fan_array = speed_fan.to_le_bytes();
+    let gpu_temp_aray = gpu_temp.to_le_bytes();
 
     data_buffer[8] = 165;
     data_buffer[9] = 255;
@@ -150,7 +151,7 @@ pub fn generate_sysinfo_buffer(cpu_temp: u8, gpu_temp: u8, speed_fan: f32, downl
     data_buffer[13] = 0; //i mean, if this is ever > 1 your cpu temp > 256c and well....that's not good
     data_buffer[14] = cpu_temp;
     data_buffer[15] = 0; //i mean, if this is ever > 1 your gpu temp > 256c and well....that's not good
-    data_buffer[16] = gpu_temp;
+    data_buffer[16] = gpu_temp_aray[0];
     data_buffer[17] = 0;
     data_buffer[18] = 0; //or 60? I think this is SSD temp or some other thermal identifier
     data_buffer[19] = speed_fan_array[1]; // This is fan rpm, 1 = 256, 2 = 512, the next one adds on.

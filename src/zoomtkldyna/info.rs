@@ -44,14 +44,14 @@ pub enum GpuMode {
     Manual(
         /// Manually set GPU temperature
         #[bpaf(short('g'), long("gpu-temp"), argument("TEMP"))]
-        u8,
+        u32,
     ),
 }
 
 impl GpuMode {
-    pub fn either(&self) -> Either<GpuTemp, u8> {
+    pub fn either(&self) -> Either<GpuStats, u32> {
         match self {
-            GpuMode::Id(i) => Either::Left(GpuTemp::new(*i)),
+            GpuMode::Id(i) => Either::Left(GpuStats::new(*i)),
             GpuMode::Manual(v) => Either::Right(*v),
         }
     }
@@ -70,7 +70,7 @@ pub enum SystemArgs {
         gpu_mode: GpuMode,
         /// Manually set fan speed
         #[bpaf(short, long)]
-        speed_fan: Option<f32>,
+        speed_fan: Option<u32>,
         /// Manually set download speed
         #[bpaf(short, long)]
         download: Option<f32>,
@@ -78,11 +78,11 @@ pub enum SystemArgs {
 }
 
 /// Helper struct to track gpu temperature
-pub struct GpuTemp {
+pub struct GpuStats {
     maybe_device: Option<Device<'static>>,
 }
 
-impl GpuTemp {
+impl GpuStats {
     /// Construct a new gpu tempurature monitor, optionally selecting by device index
     pub fn new(index: u32) -> Self {
         static NVML: LazyLock<Option<Nvml>> = LazyLock::new(|| {
@@ -105,17 +105,24 @@ impl GpuTemp {
     }
 
     // Refresh and poll the current temperature
-    pub fn get_temp(&self, farenheit: bool) -> Option<u8> {
+    pub fn get_temp(&self, farenheit: bool) -> Option<u32> {
         self.maybe_device
             .as_ref()
             .and_then(|d| d.temperature(TemperatureSensor::Gpu).ok())
             .map(|v| {
                 if farenheit {
-                    (v as f64 * 9. / 5. + 32.) as u8
+                    (v as f64 * 9. / 5. + 32.) as u32
                 } else {
-                    v as u8
+                    v as u32
                 }
             })
+    }
+
+    // Refresh and poll the current GPU temperature
+    pub fn get_fanspeed(&self) -> Option<u32> {
+        self.maybe_device
+            .as_ref()
+            .and_then(|d| d.fan_speed_rpm(0).ok())
     }
 }
 
@@ -155,8 +162,8 @@ pub fn apply_system(
     keyboard: &mut ZoomTklDyna,
     farenheit: bool,
     cpu: &mut Either<CpuTemp, u8>,
-    gpu: &Either<GpuTemp, u8>,
-    speed_fan: Option<f32>,
+    gpu: &Either<GpuStats, u32>,
+    speed_fan: Option<u32>,
     download: Option<f32>,
 ) -> Result<(), Box<dyn Error>> {
     let mut cpu_temp = cpu
@@ -179,10 +186,21 @@ pub fn apply_system(
         gpu_temp = 99;
     }
 
-    let mut speed_fan = speed_fan.unwrap_or_default();
-    if speed_fan >= 10000.0 {
-        eprintln!("warning: actual fan speed at {speed_fan}. clamping to 9999");
-        speed_fan = 9999.9;
+    let mut speed_fan_used: u32;
+    if speed_fan.is_none(){
+        speed_fan_used = gpu
+        .as_ref()
+        .map_left(|g| g.get_fanspeed().unwrap_or_default())
+        .map_right(|v| *v)
+        .into_inner();
+    } else {
+        //means our value was manually inputted from command line
+        speed_fan_used = speed_fan.unwrap_or_default();
+    }
+
+    if speed_fan_used >= 10000 {
+        eprintln!("warning: actual fan speed at {speed_fan_used}. clamping to 9999");
+        speed_fan_used = 9999;
     }
 
     let mut download = download.unwrap_or_default();
@@ -192,10 +210,10 @@ pub fn apply_system(
     }
 
     keyboard
-        .set_system_info(cpu_temp, gpu_temp, speed_fan, download)
+        .set_system_info(cpu_temp, gpu_temp, speed_fan_used, download)
         .map_err(|e| format!("failed to set system info: {e}"))?;
     println!(
-        "updated system info {{ cpu_temp: {cpu_temp}, gpu_temp: {gpu_temp}, speed_fan: {speed_fan}, download: {download} }}"
+        "updated system info {{ cpu_temp: {cpu_temp}, gpu_temp: {gpu_temp}, speed_fan: {speed_fan_used}, download: {download} }}"
     );
 
     Ok(())

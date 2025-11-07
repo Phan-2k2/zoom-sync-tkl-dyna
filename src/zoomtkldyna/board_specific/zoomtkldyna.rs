@@ -114,8 +114,8 @@ impl ZoomTklDyna {
     pub fn set_system_info(
         &mut self,
         cpu_temp: u8,
-        gpu_temp: u8,
-        speed_fan: f32,
+        gpu_temp: u32,
+        speed_fan: u32,
         download_rate: f32,
     ) -> ZoomTklDynaResult<()> {
         let res = self.execute(abi::generate_sysinfo_buffer(cpu_temp, gpu_temp, speed_fan, download_rate))?;

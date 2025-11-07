@@ -77,7 +77,7 @@ enum SetCommand {
         gpu_mode: GpuMode,
         /// Manually set fan speed
         #[bpaf(short, long)]
-        speed_fan: Option<f32>,
+        speed_fan: Option<u32>,
         /// Manually set download speed
         #[bpaf(short, long)]
         download: Option<f32>,
@@ -131,7 +131,7 @@ fn refresh(mut args: RefreshArgs) -> Result<(), Box<dyn Error>> {
 fn run(
     args: &mut RefreshArgs,
     cpu: &mut Option<Either<info::CpuTemp, u8>>,
-    gpu: &Option<Either<info::GpuTemp, u8>>,
+    gpu: &Option<Either<info::GpuStats, u32>>,
 ) -> Result<(), Box<dyn Error>> {
     let mut keyboard = ZoomTklDyna::open()?;
     println!("connected to keyboard");
