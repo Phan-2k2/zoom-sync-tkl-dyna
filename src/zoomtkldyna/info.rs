@@ -68,6 +68,9 @@ pub enum SystemArgs {
         cpu_mode: CpuMode,
         #[bpaf(external)]
         gpu_mode: GpuMode,
+        /// Manually set fan speed
+        #[bpaf(short, long)]
+        speed_fan: Option<f32>,
         /// Manually set download speed
         #[bpaf(short, long)]
         download: Option<f32>,
@@ -153,6 +156,7 @@ pub fn apply_system(
     farenheit: bool,
     cpu: &mut Either<CpuTemp, u8>,
     gpu: &Either<GpuTemp, u8>,
+    speed_fan: Option<f32>,
     download: Option<f32>,
 ) -> Result<(), Box<dyn Error>> {
     let mut cpu_temp = cpu
@@ -171,21 +175,27 @@ pub fn apply_system(
         .map_right(|v| *v)
         .into_inner();
     if gpu_temp >= 100 {
-        eprintln!("warning: actual gpu temerature at {gpu_temp}. clamping to 99");
+        eprintln!("warning: actual gpu temperature at {gpu_temp}. clamping to 99");
         gpu_temp = 99;
+    }
+
+    let mut speed_fan = speed_fan.unwrap_or_default();
+    if speed_fan >= 10000.0 {
+        eprintln!("warning: actual fan speed at {speed_fan}. clamping to 9999");
+        speed_fan = 9999.9;
     }
 
     let mut download = download.unwrap_or_default();
     if download >= 1000.0 {
-        eprintln!("warning: actual download temerature at {download}. clamping to 999.9");
+        eprintln!("warning: actual download speed at {download}. clamping to 999.9");
         download = 999.9;
     }
 
     keyboard
-        .set_system_info(cpu_temp, gpu_temp, download)
+        .set_system_info(cpu_temp, gpu_temp, speed_fan, download)
         .map_err(|e| format!("failed to set system info: {e}"))?;
     println!(
-        "updated system info {{ cpu_temp: {cpu_temp}, gpu_temp: {gpu_temp}, download: {download} }}"
+        "updated system info {{ cpu_temp: {cpu_temp}, gpu_temp: {gpu_temp}, speed_fan: {speed_fan}, download: {download} }}"
     );
 
     Ok(())

@@ -2,23 +2,12 @@
 use std::error::Error;
 use std::fmt::{Debug};
 use std::thread::sleep;
-// use std::fmt::{Debug, Display};
-// use std::io::{stdout, Seek, Write};
-// use std::path::PathBuf;
-// use std::str::FromStr;
 use std::time::{Duration, Instant};
 
 use bpaf::{Bpaf, Parser};
-// use chrono::{DurationRound, TimeDelta};
 use either::Either;
-// use image::codecs::gif::GifDecoder;
-// use image::codecs::png::PngDecoder;
-// use image::codecs::webp::WebPDecoder;
-// use image::AnimationDecoder;
-// use tokio_stream::StreamExt;
 
 use crate::info::{apply_system, cpu_mode, gpu_mode, system_args, CpuMode, GpuMode, SystemArgs};
-// use crate::media::{encode_gif, encode_image};
 use crate::screen::{apply_screen, screen_args, screen_args_with_reactive, ScreenArgs};
 use crate::weather::{apply_weather, weather_args, WeatherArgs};
 
@@ -86,6 +75,9 @@ enum SetCommand {
         cpu_mode: CpuMode,
         #[bpaf(external)]
         gpu_mode: GpuMode,
+        /// Manually set fan speed
+        #[bpaf(short, long)]
+        speed_fan: Option<f32>,
         /// Manually set download speed
         #[bpaf(short, long)]
         download: Option<f32>,
@@ -93,72 +85,7 @@ enum SetCommand {
     /// Change current screen
     #[bpaf(command, fallback_to_usage)]
     Screen(#[bpaf(external(screen_args))] ScreenArgs),
-    // /// Upload static image
-    // #[bpaf(command, fallback_to_usage)]
-    // Image(#[bpaf(external(set_media_args))] SetMediaArgs),
-    // /// Upload animated image (gif/webp/apng)
-    // #[bpaf(command, fallback_to_usage)]
-    // Gif(#[bpaf(external(set_media_args))] SetMediaArgs),
-    // /// Clear all media files
-    // #[bpaf(command)]
-    // Clear,
 }
-
-// #[derive(Clone, Debug, Bpaf)]
-// enum SetMediaArgs {
-//     Set {
-//         /// Use nearest neighbor interpolation when resizing, otherwise uses gaussian
-//         #[bpaf(short('n'), long("nearest"))]
-//         nearest: bool,
-//         /// Optional background color for transparent images
-//         #[bpaf(
-//             short,
-//             long,
-//             fallback(Color([0; 3])),
-//             display_fallback,
-//         )]
-//         bg: Color,
-//         /// Path to image to re-encode and upload
-//         #[bpaf(positional("PATH"), guard(|p| p.exists(), "file not found"))]
-//         path: PathBuf,
-//     },
-//     /// Delete the content, resetting back to the default.
-//     #[bpaf(command)]
-//     Clear,
-// }
-
-// /// Utility for easily parsing hex colors from bpaf
-// #[derive(Debug, Clone, Hash)]
-// struct Color(pub [u8; 3]);
-// impl Display for Color {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         let [r, g, b] = self.0;
-//         f.write_str(&format!("#{r:02x}{g:02x}{b:02x}"))
-//     }
-// }
-// impl FromStr for Color {
-//     type Err = String;
-//     fn from_str(code: &str) -> Result<Self, Self::Err> {
-//         // parse hex string into rgb
-//         let mut hex = (*code).trim_start_matches('#').to_string();
-//         match hex.len() {
-//             3 => {
-//                 // Extend 3 character hex colors
-//                 hex = hex.chars().flat_map(|a| [a, a]).collect();
-//             },
-//             6 => {},
-//             l => return Err(format!("Invalid hex length for {code}: {l}")),
-//         }
-//         if let Ok(channel_bytes) = u32::from_str_radix(&hex, 16) {
-//             let r = ((channel_bytes >> 16) & 0xFF) as u8;
-//             let g = ((channel_bytes >> 8) & 0xFF) as u8;
-//             let b = (channel_bytes & 0xFF) as u8;
-//             Ok(Self([r, g, b]))
-//         } else {
-//             Err(format!("Invalid hex color: {code}"))
-//         }
-//     }
-// }
 
 #[derive(Clone, Debug, Bpaf)]
 #[bpaf(options, version, descr(env!("CARGO_PKG_DESCRIPTION")))]
@@ -285,12 +212,13 @@ fn run(
             weather_since_last_refresh = Instant::now();
         }
         if system_since_last_refresh.elapsed() > system_interval {
-            if let SystemArgs::Enabled { download, .. } = args.system_args {
+            if let SystemArgs::Enabled { speed_fan, download, .. } = args.system_args {
                 apply_system(
                     &mut keyboard,
                     args.farenheit,
                     cpu.as_mut().unwrap(),
                     gpu.as_ref().unwrap(),
+                    speed_fan,
                     download,
                 )?;
             }
@@ -317,12 +245,14 @@ fn main() -> Result<(), Box<dyn Error>> {
                     farenheit,
                     cpu_mode,
                     gpu_mode,
+                    speed_fan,
                     download,
                 } => apply_system(
                     &mut keyboard,
                     farenheit,
                     &mut cpu_mode.either(),
                     &gpu_mode.either(),
+                    speed_fan,
                     download,
                 ),
                 SetCommand::Screen(args) => {apply_screen(&args, &mut keyboard)},

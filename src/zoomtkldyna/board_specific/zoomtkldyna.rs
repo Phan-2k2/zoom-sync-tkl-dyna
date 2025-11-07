@@ -6,7 +6,6 @@ use std::{sync::{LazyLock, RwLock}};
 // use crate::{board_specific::checksum::checksum, screen::ScreenArgs};
 use crate::{screen::ScreenArgs};
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
-use crate::board_specific::float::DumbFloat16;
 use hidapi::{HidApi, HidDevice};
 // use crate::board_specific::types::{ScreenPosition, ScreenTheme, UploadChannel, ZoomTklDynaResult, Icon, ZoomTklDynaError};
 use crate::board_specific::types::{ZoomTklDynaResult, Icon, ZoomTklDynaError};
@@ -116,10 +115,10 @@ impl ZoomTklDyna {
         &mut self,
         cpu_temp: u8,
         gpu_temp: u8,
+        speed_fan: f32,
         download_rate: f32,
     ) -> ZoomTklDynaResult<()> {
-        let download = DumbFloat16::new(download_rate);
-        let res = self.execute(abi::generate_sysinfo_buffer(cpu_temp, gpu_temp, download))?;
+        let res = self.execute(abi::generate_sysinfo_buffer(cpu_temp, gpu_temp, speed_fan, download_rate))?;
         (res[1] == 1 && res[0] == 28)
             .then_some(())
             .ok_or(ZoomTklDynaError::UpdateCommandFailed)
