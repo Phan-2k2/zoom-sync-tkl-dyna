@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"]
+// #![windows_subsystem = "windows"]
 use std::error::Error;
 use std::fmt::{Debug};
 // use std::fmt::{Debug, Display};
