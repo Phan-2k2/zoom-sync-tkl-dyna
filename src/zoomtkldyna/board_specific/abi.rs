@@ -1,4 +1,3 @@
-use crate::board_specific::float::DumbFloat16;
 // use crate::board_specific::types::{Icon, ScreenTheme, ZoomTklDynaError};
 use crate::board_specific::types::{Icon};
 use crate::screen::ScreenArgs;
@@ -137,11 +136,13 @@ pub fn generate_weather_buffer(icon: Icon, current: f32, low: f32, high: f32) ->
 }
 
 // A bunch of these values 
-pub fn generate_sysinfo_buffer(cpu_temp: u8, gpu_temp: u8, download: DumbFloat16) -> [u8; 33] {
+pub fn generate_sysinfo_buffer(cpu_temp: u8, gpu_temp: u32, speed_fan: u32, download: f32) -> [u8; 33] {
     let mut data_buffer = [0; 32];
     let data_buffer_len = data_buffer.len();
 
-    let download_array: [u8; 2] = download.to_bit_repr();
+    let download_array = ((download * 10.0) as u32).to_le_bytes();
+    let speed_fan_array = speed_fan.to_le_bytes();
+    let gpu_temp_aray = gpu_temp.to_le_bytes();
 
     data_buffer[8] = 165;
     data_buffer[9] = 255;
@@ -150,13 +151,13 @@ pub fn generate_sysinfo_buffer(cpu_temp: u8, gpu_temp: u8, download: DumbFloat16
     data_buffer[13] = 0; //i mean, if this is ever > 1 your cpu temp > 256c and well....that's not good
     data_buffer[14] = cpu_temp;
     data_buffer[15] = 0; //i mean, if this is ever > 1 your gpu temp > 256c and well....that's not good
-    data_buffer[16] = gpu_temp;
+    data_buffer[16] = gpu_temp_aray[0];
     data_buffer[17] = 0;
     data_buffer[18] = 0; //or 60? I think this is SSD temp or some other thermal identifier
-    data_buffer[19] = 0; // This is fan rpm, 1 = 256, 2 = 512, the next one adds on.
-    data_buffer[20] = 0; // Fan RPM modifier, +1 to above.
-    data_buffer[21] = download_array[0]; // This is network speed, 1 = 25.6, 2 = 51.2, the next one adds on.
-    data_buffer[22] = download_array[1]; // Network speed modifier in 0.1 increments
+    data_buffer[19] = speed_fan_array[1]; // This is fan rpm, 1 = 256, 2 = 512, the next one adds on.
+    data_buffer[20] = speed_fan_array[0]; // Fan RPM modifier, +1 to above.
+    data_buffer[21] = download_array[1]; // This is network speed, 1 = 25.6, 2 = 51.2, the next one adds on.
+    data_buffer[22] = download_array[0]; // Network speed modifier in 0.1 increments
     data_buffer[23] = 255;
 
     data_buffer[0] = 28;

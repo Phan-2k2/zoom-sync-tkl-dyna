@@ -6,7 +6,6 @@ use std::{sync::{LazyLock, RwLock}};
 // use crate::{board_specific::checksum::checksum, screen::ScreenArgs};
 use crate::{screen::ScreenArgs};
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
-use crate::board_specific::float::DumbFloat16;
 use hidapi::{HidApi, HidDevice};
 // use crate::board_specific::types::{ScreenPosition, ScreenTheme, UploadChannel, ZoomTklDynaResult, Icon, ZoomTklDynaError};
 use crate::board_specific::types::{ZoomTklDynaResult, Icon, ZoomTklDynaError};
@@ -115,117 +114,13 @@ impl ZoomTklDyna {
     pub fn set_system_info(
         &mut self,
         cpu_temp: u8,
-        gpu_temp: u8,
+        gpu_temp: u32,
+        speed_fan: u32,
         download_rate: f32,
     ) -> ZoomTklDynaResult<()> {
-        let download = DumbFloat16::new(download_rate);
-        let res = self.execute(abi::generate_sysinfo_buffer(cpu_temp, gpu_temp, download))?;
+        let res = self.execute(abi::generate_sysinfo_buffer(cpu_temp, gpu_temp, speed_fan, download_rate))?;
         (res[1] == 1 && res[0] == 28)
             .then_some(())
             .ok_or(ZoomTklDynaError::UpdateCommandFailed)
     }
-
-    // fn upload_media(
-    //     &mut self,
-    //     buf: impl AsRef<[u8]>,
-    //     channel: UploadChannel,
-    //     cb: impl Fn(usize),
-    // ) -> ZoomTklDynaResult<()> {
-    //     let image = buf.as_ref();
-
-    //     // start upload
-    //     let res = self.execute(abi::upload_start(channel))?;
-    //     if res[1] != 1 || res[2] != 1 {
-    //         return Err(ZoomTklDynaError::UpdateCommandFailed);
-    //     }
-    //     let res = self.execute(abi::upload_length(image.len() as u32))?;
-    //     if res[1] != 1 || res[2] != 1 {
-    //         return Err(ZoomTklDynaError::UpdateCommandFailed);
-    //     }
-
-    //     for (i, chunk) in image.chunks(24).enumerate() {
-    //         cb(i);
-
-    //         let chunk_len = chunk.len();
-    //         let mut buf = [0u8; 33];
-
-    //         // command prefix
-    //         buf[0] = 0x0;
-    //         buf[1] = 88;
-    //         buf[2] = 2 + chunk_len as u8 + 4;
-
-    //         // chunk index and data
-    //         buf[3] = (i >> 8) as u8;
-    //         buf[4] = (i & 255) as u8;
-    //         buf[5..5 + chunk.len()].copy_from_slice(chunk);
-
-    //         let mut offset = 3 + 2 + chunk_len;
-
-    //         // Images are always aligned, but we need to manually align the last chunk of gifs
-    //         if channel == UploadChannel::Gif && i == image.len() / 24 {
-    //             // compute padding for final payload, the checksum needs 32-bit alignment
-    //             let padding = (4 - (image.len() % 24) % 4) % 4;
-    //             buf[2] += padding as u8;
-    //             offset += padding;
-    //         }
-
-    //         // compute checksum
-    //         let data = &buf[3..offset + 2];
-    //         let crc = checksum(data);
-    //         buf[offset..offset + 4].copy_from_slice(&crc);
-
-    //         // send payload and read response
-    //         let res = self.execute(buf)?;
-    //         if res[1] != 1 || res[2] != 1 {
-    //             return Err(ZoomTklDynaError::UpdateCommandFailed);
-    //         }
-    //     }
-
-    //     let res = self.execute(abi::upload_end())?;
-    //     if res[1] != 1 || res[2] != 1 {
-    //         return Err(ZoomTklDynaError::UpdateCommandFailed);
-    //     }
-
-    //     // TODO: is this required?
-    //     self.reset_screen()?;
-
-    //     Ok(())
-    // }
-
-    // /// Upload an image to the keyboard. Must be encoded as 110x110 RGBA-3328 raw buffer
-    // #[inline(always)]
-    // pub fn upload_image(&mut self, buf: impl AsRef<[u8]>, cb: impl Fn(usize)) -> ZoomTklDynaResult<()> {
-    //     let buf = buf.as_ref();
-    //     if buf.len() != 36300 {
-    //         return Err(ZoomTklDynaError::GifTooLarge);
-    //     }
-    //     self.upload_media(buf, UploadChannel::Image, cb)
-    // }
-
-    // /// Upload a gif to the keyboard. Must be 111x111.
-    // #[inline(always)]
-    // pub fn upload_gif(&mut self, buf: impl AsRef<[u8]>, cb: impl Fn(usize)) -> ZoomTklDynaResult<()> {
-    //     if buf.as_ref().len() >= 1013808 {
-    //         return Err(ZoomTklDynaError::GifTooLarge);
-    //     }
-    //     self.upload_media(buf, UploadChannel::Gif, cb)
-    // }
-
-    // /// Clear the image slot
-    // #[inline(always)]
-    // pub fn clear_image(&mut self) -> ZoomTklDynaResult<()> {
-    //     let res = self.execute(abi::delete_image())?;
-    //     (res[1] == 1 && res[2] == 1)
-    //         .then_some(())
-    //         .ok_or(ZoomTklDynaError::UpdateCommandFailed)
-    // }
-
-    // /// Clear the gif slot
-    // #[inline(always)]
-    // pub fn clear_gif(&mut self) -> ZoomTklDynaResult<()> {
-    //     let res = self.execute(abi::delete_gif())?;
-    //     (res[1] == 1 && res[2] == 1)
-    //         .then_some(())
-    //         .ok_or(ZoomTklDynaError::UpdateCommandFailed)
-    // }
 }

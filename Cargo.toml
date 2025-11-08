@@ -39,7 +39,7 @@ rgb565 = "0.1.3" # image encoding
 # data fetching
 ipinfo = "3.0.1" # free geolocation api
 open-meteo-api = "0.1.4" # free weather api
-nvml-wrapper = "0.10.0" # nvidia gpu temp
+nvml-wrapper = "0.11.0" # nvidia gpu temp
 sysinfo = "0.33.1" # cpu temp
 
 [target.'cfg(target_os = "linux")'.dependencies]
