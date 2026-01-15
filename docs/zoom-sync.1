@@ -4,7 +4,7 @@
 .PP
 .SH SYNOPSIS
 .nf
-\fBzoom\-sync\fP\fR \fP\fR[\fP\fB\-\-auto\fP\fR | \fP\fB\-\-zoom65v3\fP\fR] [\fP\fICOMMAND ...\fP\fR]\fP\fR
+\fBzoom\-sync\fP\fR \fP\fR[\fP\fB\-b\fP\fR=\fP\fIBOARD\fP\fR] [\fP\fICOMMAND ...\fP\fR]\fP\fR
 \fP\fBzoom\-sync\fP\fR \fP\fBtray\fP\fR \fP\fR
 \fP\fBzoom\-sync\fP\fR \fP\fBset\fP\fR \fP\fICOMMAND ...\fP\fR
 \fP\fBzoom\-sync\fP\fR \fP\fBset\fP\fR \fP\fBtime\fP\fR \fP\fR
@@ -22,19 +22,13 @@
 .SH NAME
 \fRzoom\-sync \- \fP\fRCross\-platform utility for syncing zoom65v3 screen modules\fP
 .SH SYNOPSIS
-\fBzoom\-sync\fP\fR \fP\fR[\fP\fB\-\-auto\fP\fR | \fP\fB\-\-zoom65v3\fP\fR] [\fP\fICOMMAND ...\fP\fR]\fP
-.PP
-.SS BOARD\ SELECTION:
-.TP
-\fB    \-\-auto\fP
-\fRAuto\-detect connected board (default)\fP
-.PP
-.TP
-\fB    \-\-zoom65v3\fP
-\fRZoom65 V3\fP
-.PP
+\fBzoom\-sync\fP\fR \fP\fR[\fP\fB\-b\fP\fR=\fP\fIBOARD\fP\fR] [\fP\fICOMMAND ...\fP\fR]\fP
 .PP
 .SS AVAILABLE\ OPTIONS:
+.TP
+\fB\-b\fP\fR, \fP\fB\-\-board\fP\fR=\fP\fIBOARD\fP
+\fRBoard to use (auto, zoom65v3). Defaults to auto\-detection.\fP
+.PP
 .TP
 \fB\-h\fP\fR, \fP\fB\-\-help\fP
 \fRPrints help information\fP

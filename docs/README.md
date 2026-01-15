@@ -20,19 +20,13 @@
 
 Cross-platform utility for syncing zoom65v3 screen modules
 
-**Usage**: **`zoom-sync`** \[**`--auto`** | **`--zoom65v3`**\] \[_`COMMAND ...`_\]
-
-
-
-**Board selection:**
-- **`    --auto`** &mdash; 
-  Auto-detect connected board (default)
-- **`    --zoom65v3`** &mdash; 
-  Zoom65 V3
+**Usage**: **`zoom-sync`** \[**`-b`**=_`BOARD`_\] \[_`COMMAND ...`_\]
 
 
 
 **Available options:**
+- **`-b`**, **`--board`**=_`BOARD`_ &mdash; 
+  Board to use (auto, zoom65v3). Defaults to auto-detection.
 - **`-h`**, **`--help`** &mdash; 
   Prints help information
 - **`-V`**, **`--version`** &mdash; 
