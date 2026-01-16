@@ -424,7 +424,7 @@ async fn async_tray_app(board_kind: BoardKind) -> Result<(), Box<dyn Error>> {
                     }
                     #[cfg(target_os = "linux")]
                     Ok(Ok(ev)) if !is_reactive_running => {
-                        if matches!(ev.kind(), evdev::InputEventKind::Key(_)) {
+                        if matches!(ev.destructure(), evdev::EventSummary::Key(_, _, _)) {
                             is_reactive_running = true;
                             if let Some(ref mut b) = board {
                                 if let Some(screen) = b.as_screen() {
