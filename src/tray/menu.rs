@@ -6,6 +6,8 @@ use muda::{
 };
 use zoom_sync_core::Board;
 
+use crate::tray::ZOOM_ICON;
+
 use super::commands::{TrayCommand, TrayState};
 
 /// Menu item IDs for event handling
@@ -392,17 +394,17 @@ pub fn build_menu(state: &TrayState) -> MenuItems {
     menu.append(&PredefinedMenuItem::about(
         Some("About Zoom Sync"),
         Some(AboutMetadata {
+            icon: None,
             name: Some("Zoom Sync".into()),
             version: Some(concat!("v", env!("CARGO_PKG_VERSION")).into()),
             website: Some("https://github.com/ozwaldorf/zoom-sync".into()),
             copyright: Some("(c) Ossian Mapes 2025, Licensed under MIT".into()),
-            comments: Some("Zoom Sync is not affiliated with any company.\nMeletrix logo owned and copyrighted by Wuque Studio.".into()),
+            comments: Some("This software is not affiliated with any company.\nZoom logo copyrighted by Meletrix Inc.".into()),
             short_version: None,
             authors: None,
             license: None,
             website_label: None,
             credits: None,
-            icon: None,
         }),
     ))
     .unwrap();
