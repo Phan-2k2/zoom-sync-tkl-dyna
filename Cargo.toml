@@ -1,6 +1,6 @@
 [package]
 name = "zoom-sync"
-version = "0.1.2"
+version = "0.2.0"
 description = "Cross-platform utility for syncing zoom65v3 screen modules"
 repository = "https://github.com/ozwaldorf/zoom-sync"
 authors = [ "ozwaldorf <self@ossian.dev>" ]
@@ -12,12 +12,13 @@ members = ["boards/core", "boards/zoom65v3"]
 
 [workspace.dependencies]
 chrono = "0.4.38" # local time
+hidapi = { version = "2.6", features = ["windows-native"] } # board detection
 
 [dependencies]
 # keyboard management
-zoom-sync-core = { path = "./boards/core" }
-zoom65v3 = { path = "./boards/zoom65v3", version = "0.3" }
-hidapi = { version = "2.6", features = ["windows-native"] } # board detection
+zoom-sync-core = { path = "./boards/core", version = "0.1" }
+zoom65v3 = { path = "./boards/zoom65v3", version = "0.4" }
+hidapi = { workspace = true }
 
 # runtime and scaffalding
 tokio = { version = "1.41", features = ["full"] }
@@ -42,6 +43,22 @@ open-meteo-api = "0.1.4" # free weather api
 nvml-wrapper = "0.10.0" # nvidia gpu temp
 sysinfo = "0.33.1" # cpu temp
 
+# system tray
+tray-icon = { version = "0.17", default-features = false }
+muda = { version = "0.14", default-features = false }
+rfd = "0.17"
+notify-rust = "4"
+
+# errors
+thiserror = "2"
+
+# config persistence
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+directories = "5.0"
+humantime-serde = "1.1"
+
 [target.'cfg(target_os = "linux")'.dependencies]
 evdev = { version = "0.12.2", features = ["tokio"] } # reading keypress events on linux
+gtk = "0.18"  # required for tray icon initialization
 
