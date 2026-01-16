@@ -16,6 +16,7 @@
           nativeBuildInputs = with pkgs; [
             pkg-config
             addDriverRunpath
+            makeWrapper
           ];
           buildInputs = with pkgs; [
             systemd # for libudev
@@ -23,8 +24,11 @@
             gtk3 # for tray icon and file dialogs (includes glib, cairo, pango, etc.)
             libayatana-appindicator # for system tray on Linux
           ];
-          # for exposing nvml dynamic library
-          fixupPhase = ''addDriverRunpath $out/bin/zoom-sync'';
+          postFixup = ''
+            addDriverRunpath $out/bin/zoom-sync
+            wrapProgram $out/bin/zoom-sync \
+              --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath [ pkgs.libayatana-appindicator ]}
+          '';
         }
       ) { };
 
