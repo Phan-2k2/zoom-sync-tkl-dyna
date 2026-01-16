@@ -16,11 +16,13 @@ use image::AnimationDecoder;
 use tokio_stream::StreamExt;
 use zoom65v3::Zoom65v3;
 
+use crate::detection::{board_kind, BoardKind};
 use crate::info::{apply_system, cpu_mode, gpu_mode, system_args, CpuMode, GpuMode, SystemArgs};
 use crate::media::{encode_gif, encode_image};
 use crate::screen::{apply_screen, screen_args, screen_args_with_reactive, ScreenArgs};
 use crate::weather::{apply_weather, weather_args, WeatherArgs};
 
+mod detection;
 mod info;
 mod media;
 mod screen;
@@ -60,6 +62,7 @@ struct RefreshArgs {
     #[bpaf(external)]
     system_args: SystemArgs,
 }
+
 
 #[derive(Clone, Debug, Bpaf)]
 enum SetCommand {
