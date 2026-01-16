@@ -46,13 +46,18 @@
       };
 
       nixosModules.default =
-        { config, lib, pkgs, ... }:
+        {
+          config,
+          lib,
+          pkgs,
+          ...
+        }:
         let
           cfg = config.services.zoom-sync;
         in
         {
           options.services.zoom-sync = {
-            enable = lib.mkEnableOption "zoom-sync keyboard screen sync service";
+            enable = lib.mkEnableOption "Screen module sync for Zoom keyboards";
 
             package = lib.mkPackageOption self.packages.${system} "default" { };
 
@@ -64,7 +69,7 @@
             extraArgs = lib.mkOption {
               type = lib.types.listOf lib.types.str;
               default = [ ];
-              example = [ "--screen" "weather" "--no-system" ];
+              example = [ "--zoom65v3" ];
               description = "Extra arguments to pass to zoom-sync.";
             };
           };
@@ -79,7 +84,7 @@
             users.users.${cfg.user}.extraGroups = lib.mkIf pkgs.stdenv.isLinux [ "input" ];
 
             systemd.user.services.zoom-sync = {
-              description = "Screen module sync for Zoom65 v3 keyboards";
+              description = "Screen module sync for Zoom keyboards";
               wantedBy = [ "graphical-session.target" ];
               partOf = [ "graphical-session.target" ];
               after = [ "graphical-session.target" ];

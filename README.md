@@ -57,10 +57,35 @@ cargo install zoom-sync
 
 ### Nix
 
-> Note: On nixos, you must use the flake for nvidia gpu temp to work
+> Note: On NixOS, you must use the flake for nvidia gpu temp to work
 
 ```bash
 nix run github:ozwaldorf/zoom-sync
+```
+
+#### NixOS Module
+
+The flake provides a NixOS module for running zoom-sync as a user service:
+
+```nix
+{
+  inputs.zoom-sync.url = "github:ozwaldorf/zoom-sync";
+
+  outputs = { nixpkgs, zoom-sync, ... }: {
+    nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
+      modules = [
+        zoom-sync.nixosModules.default
+        {
+          services.zoom-sync = {
+            enable = true;
+            user = "myuser";
+            # extraArgs = [ "--screen" "weather" ];
+          };
+        }
+      ];
+    };
+  };
+}
 ```
 
 ## Usage
@@ -73,28 +98,24 @@ Detailed command line documentation can be found in [docs/README.md](./docs/READ
 
 #### Linux / systemd
 
-A systemd service can be easily setup that will manage running zoom-sync on boot.
+A systemd user service can be set up to run zoom-sync with your graphical session.
 An example can be found at [docs/zoom-sync.service](./docs/zoom-sync.service).
 
 ```bash
-# edit configuration arguments in ExecStart
-vim docs/zoom-sync.service
+# copy to user services
+mkdir -p ~/.config/systemd/user
+cp docs/zoom-sync.service ~/.config/systemd/user/
 
-# copy to system services
-sudo cp docs/zoom-sync.service /etc/systemd/system
-
-# enable and start the servive
-sudo systemctl enable --now zoom-sync.service
+# enable and start the service
+systemctl --user enable --now zoom-sync.service
 ```
 
 #### Windows
 
-1. Locate the zoom-sync.exe file depending on the installation and open in the file manager
-   - From source or crates.io: Press Windows + R (Run) and enter `%userprofile%\.cargo\bin`
-2. Create a new shortcut to your zoom-sync.exe (right click -> create shortcut)
-3. Edit shortcut (right click -> properties) and add any configuration arguments to the `target` after `zoom-sync.exe`
-4. Press Windows + R (Run) and type `shell:startup`
-5. Move the newly created shortcut to the opened startup applications folder to have zoom-sync run automatically on boot
+1. Press Windows + R and enter `%userprofile%\.cargo\bin` to open the install location
+2. Right-click `zoom-sync.exe` and select "Create shortcut"
+3. Press Windows + R and enter `shell:startup` to open the startup folder
+4. Move the shortcut to the startup folder
 
 #### OSX
 
@@ -103,29 +124,32 @@ sudo systemctl enable --now zoom-sync.service
 ### Simple examples
 
 ```bash
-# Only update time and weather, and set the screen to weather on connect:
-zoom-sync --no-system --screen weather
+# Run the tray application (default)
+zoom-sync
 
-# Only update time and system info, and set the screen to cpu temp on connect:
-zoom-sync --no-weather --screen cpu
+# Set weather using coordinates (skips ipinfo geolocation)
+zoom-sync set weather --coords 27.1127 109.3497
 
-# Use hardcoded coordinates for fetching weather
-zoom-sync --coords 27.1127 109.3497
+# Set weather manually (wmo code, current, min, max)
+zoom-sync set weather -w 0 10 20 5
 
-# use a gif as both static and animated image, run with reactive mode enabled and no other data
-zoom-sync set image my-anim.gif
+# Set system temps in fahrenheit
+zoom-sync set system -f
+
+# Change the current screen
+zoom-sync set screen -s weather
+zoom-sync set screen -s cpu
+
+# Upload a custom image or gif
+zoom-sync set image my-image.png
 zoom-sync set gif my-anim.gif
-zoom-sync --reactive --no-system --no-weather
 
-# clear image and gif back to the chrome dino and nyancat
+# Clear image and gif back to the defaults
 zoom-sync set image clear
 zoom-sync set gif clear
 
-# set time
+# Sync time to system clock
 zoom-sync set time
-
-# set weather manually
-zoom-sync set weather -w 0 10 20 5
 ```
 
 ## Feature Checklist
@@ -148,7 +172,7 @@ zoom-sync set weather -w 0 10 20 5
 - [x] CLI arguments
 - [x] Update intervals for each value
 - [x] Simulate reactive gif mode (linux)
-- [ ] System tray menu
+- [x] System tray menu
 - [ ] Package releases
   - [x] Crates.io
   - [ ] Nixpkgs

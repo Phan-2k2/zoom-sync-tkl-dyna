@@ -1,10 +1,12 @@
 [Unit]
-Description=Screen module sync for zoom65v3 keyboards
+Description=Screen module sync for Zoom keyboards
+After=graphical-session.target
+PartOf=graphical-session.target
 
 [Service]
-ExecStart=zoom-sync # add config args here
+ExecStart=%h/.cargo/bin/zoom-sync
 Restart=on-failure
-Type=simple
+RestartSec=5
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=graphical-session.target
