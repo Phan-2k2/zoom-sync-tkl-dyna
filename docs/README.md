@@ -19,15 +19,23 @@
 
 ## zoom-sync
 
-Cross-platform utility for syncing zoom65v3 screen modules
+Cross-platform utility for syncing Zoom keyboard screen modules
 
-**Usage**: **`zoom-sync`** \[**`-b`**=_`BOARD`_\] \[_`COMMAND ...`_\]
+**Usage**: **`zoom-sync`** \[**`--auto`** | **`--zoom65v3`** | **`--zoom-tkl-dyna`**\] \[_`COMMAND ...`_\]
+
+
+
+**Board selection:**
+- **`    --auto`** &mdash; 
+  Auto-detect connected board (default)
+- **`    --zoom65v3`** &mdash; 
+  Zoom65 V3
+- **`    --zoom-tkl-dyna`** &mdash; 
+  Zoom TKL Dyna
 
 
 
 **Available options:**
-- **`-b`**, **`--board`**=_`BOARD`_ &mdash; 
-  Board to use (auto, zoom65v3, zoom-tkl-dyna). Defaults to auto-detection.
 - **`-h`**, **`--help`** &mdash; 
   Prints help information
 - **`-V`**, **`--version`** &mdash; 
@@ -58,6 +66,8 @@ Run with a system tray menu for GUI control
 Set specific options on the keyboard
 
 **Usage**: **`zoom-sync`** **`set`** _`COMMAND ...`_
+
+
 
 **Available options:**
 - **`-h`**, **`--help`** &mdash; 
