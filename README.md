@@ -1,3 +1,17 @@
+# NOTICE:
+This project is a fork of ozwaldorf's zoom-sync, which you can find [here](https://github.com/ozboar/zoom-sync), an attempt to get some functionality working w/Meletrix's Zoom TKL DYNA. This additional support has since been rolled into their project and will therefore this specific fork will no longer see additional updates or upgrades. 
+
+This fork has support for the following on the DYNA:
+- Update Time
+- Update Weather
+- Update Temps, Fan Speed, with manual support for CPU/downloads.
+
+In addition, there are a few changes:
+- Instead of running one application that connects to all supported keybooards, I split out the executables to generate separately of one another. In this example, we generate an executable for zoom65v3, and zoomtkldyna. 
+- An attempt to make the execution synchronous for future support for some system trays, but I got busy and never got around to it.
+
+I'll keep this repo open for future reference, but if I want to keep working on something like this, I'll probably reiterate on the newly added features that ozwaldorf has - they've done a great job reverse engineering stuff, especially w/o physically having the keyboard.
+
 # zoom-sync
 
 Cross-platform utility to sync Zoom65 v3 screen modules.
