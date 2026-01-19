@@ -12,7 +12,7 @@ use image::codecs::png::PngDecoder;
 use image::codecs::webp::WebPDecoder;
 use image::AnimationDecoder;
 use muda::MenuEvent;
-use notify_rust::{Notification, NotificationHandle};
+use notify_rust::Notification;
 use tokio_stream::StreamExt;
 use tray_icon::TrayIconBuilder;
 use zoom_sync_core::Board;
@@ -558,19 +558,11 @@ async fn handle_command(
                     let len = encoded.len();
                     let total = len / 24;
                     let progress_width = total.to_string().len();
-                    let mut notification = notify_progress("Image", 0.0);
+                    notify_uploading("Image");
                     let result = image_handler.upload_image(&encoded, &mut |i| {
                         print!("\ruploading {len} bytes ({i:progress_width$}/{total}) ... ");
                         stdout().flush().unwrap();
-                        let percent = (i as f32 * 100.0) / total as f32;
-                        if let Some(ref mut n) = notification {
-                            notify_update(n, "Image", percent);
-                        }
                     });
-                    // Close progress notification
-                    if let Some(n) = notification {
-                        n.close();
-                    }
                     match result {
                         Ok(()) => {
                             println!("done");
@@ -590,19 +582,11 @@ async fn handle_command(
                     let len = encoded.len();
                     let total = len / 24;
                     let progress_width = total.to_string().len();
-                    let mut notification = notify_progress("GIF", 0.0);
+                    notify_uploading("GIF");
                     let result = gif_handler.upload_gif(&encoded, &mut |i| {
                         print!("\ruploading {len} bytes ({i:progress_width$}/{total}) ... ");
                         stdout().flush().unwrap();
-                        let percent = (i as f32 * 100.0) / total as f32;
-                        if let Some(ref mut n) = notification {
-                            notify_update(n, "GIF", percent);
-                        }
                     });
-                    // Close progress notification
-                    if let Some(n) = notification {
-                        n.close();
-                    }
                     match result {
                         Ok(()) => {
                             println!("done");
@@ -765,21 +749,13 @@ fn parse_hex_color(hex: &str) -> Option<[u8; 3]> {
     Some([r, g, b])
 }
 
-/// Show a progress notification that can be updated
-fn notify_progress(kind: &str, percent: f32) -> Option<NotificationHandle> {
-    Notification::new()
-        .summary(&format!("zoom-sync: Uploading {kind}"))
-        .body(&format!("{:.2}%", percent))
-        .timeout(0) // Don't auto-close
-        .show()
-        .ok()
-}
-
-/// Update an existing progress notification
-fn notify_update(handle: &mut NotificationHandle, kind: &str, percent: f32) {
-    handle.summary(&format!("zoom-sync: Uploading {kind}"));
-    handle.body(&format!("{:.2}%", percent));
-    handle.update();
+/// Show an upload-in-progress notification
+fn notify_uploading(kind: &str) {
+    let _ = Notification::new()
+        .summary("zoom-sync")
+        .body(&format!("Uploading {kind}..."))
+        .timeout(3000)
+        .show();
 }
 
 /// Show a success notification

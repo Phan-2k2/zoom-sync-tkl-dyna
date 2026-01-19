@@ -6,8 +6,6 @@ use muda::{
 };
 use zoom_sync_core::Board;
 
-use crate::tray::ZOOM_ICON;
-
 use super::commands::{TrayCommand, TrayState};
 
 /// Menu item IDs for event handling
