@@ -1,6 +1,6 @@
 # zoom-sync
 
-Cross-platform utility to sync Zoom65 v3 screen modules.
+Cross-platform utility to sync Meletrix Zoom Keyboard screen modules.
 
 ## Features
 

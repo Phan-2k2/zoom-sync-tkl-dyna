@@ -73,7 +73,11 @@ pub fn build_packet(command: u8, payload: &[u8], sub_type: u8) -> [u8; 32] {
     packet[6] = (crc & 0xFF) as u8; // CRC low byte
     packet[7] = (crc >> 8) as u8; // CRC high byte
 
-    packet
+    // Additional 0 padding byte, if we need the entire data field in the future
+    let mut full_packet: [u8; 32] = [0u8; 32];
+    full_packet[0] = 0x0;
+    full_packet[1..32].copy_from_slice(&packet[..31]);
+    full_packet
 }
 
 /// Build a datetime sync packet.
