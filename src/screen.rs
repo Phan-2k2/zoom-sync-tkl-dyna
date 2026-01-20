@@ -52,31 +52,31 @@ pub fn apply_screen(args: &ScreenArgs, board: &mut dyn Board) -> Result<(), Box<
                     )
                 })?;
             screen.set_screen(pos.as_id())?;
-        }
+        },
         ScreenArgs::Up => {
             board
                 .as_screen_nav()
                 .ok_or("board does not support screen navigation")?
                 .screen_up()?;
-        }
+        },
         ScreenArgs::Down => {
             board
                 .as_screen_nav()
                 .ok_or("board does not support screen navigation")?
                 .screen_down()?;
-        }
+        },
         ScreenArgs::Switch => {
             board
                 .as_screen_nav()
                 .ok_or("board does not support screen navigation")?
                 .screen_switch()?;
-        }
+        },
         ScreenArgs::Reset => {
             board
                 .as_screen_nav()
                 .ok_or("board does not support screen navigation")?
                 .screen_reset()?;
-        }
+        },
     };
     Ok(())
 }
