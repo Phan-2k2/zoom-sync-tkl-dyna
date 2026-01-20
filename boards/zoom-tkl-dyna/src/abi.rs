@@ -52,6 +52,7 @@ pub fn build_packet(command: u8, payload: &[u8], sub_type: u8) -> [u8; 32] {
             packet[12 + i] = byte;
         }
     }
+    println!("payload: {:?}", &payload);
 
     // Calculate checksum (sum of bytes 9+ XOR 0xFF)
     let mut checksum: u16 = 0;
@@ -73,10 +74,14 @@ pub fn build_packet(command: u8, payload: &[u8], sub_type: u8) -> [u8; 32] {
     packet[6] = (crc & 0xFF) as u8; // CRC low byte
     packet[7] = (crc >> 8) as u8; // CRC high byte
 
-    // Additional 0 padding byte, if we need the entire data field in the future
+    // Additional 0 padding byte - NOTE, this loses one byte off of the original packet, 
+    // so if we're setting packet[31] we're losing that byte. As far as I know, the largest
+    // thing we send through here is 16 bytes, which 12(starting point of data)+16=28, so
+    // we *should* be alright.
     let mut full_packet: [u8; 32] = [0u8; 32];
     full_packet[0] = 0x0;
     full_packet[1..32].copy_from_slice(&packet[..31]);
+    println!("packet: {:?}", &full_packet);
     full_packet
 }
 

@@ -77,13 +77,13 @@ pub enum ScreenMode {
 impl ScreenMode {
     /// Get the two-byte payload for this screen mode.
     /// Format: [command, checksum] where checksum = 0xC4 - command (or 0xC8 for reset)
-    pub fn to_bytes(self) -> [u8; 2] {
+    pub fn to_bytes(self) -> [u8; 3] {
         match self {
-            ScreenMode::Up => [0x02, 0xC4 - 0x02],
-            ScreenMode::Down => [0x01, 0xC4 - 0x01],
-            ScreenMode::Enter => [0x03, 0xC4 - 0x03],
-            ScreenMode::Return => [0x04, 0xC4 - 0x04],
-            ScreenMode::Reset => [0x01, 0xC8],
+            ScreenMode::Up => [0x00, 0x02, 0xC4 - 0x02],
+            ScreenMode::Down => [0x00, 0x01, 0xC4 - 0x01],
+            ScreenMode::Enter => [0x00, 0x03, 0xC4 - 0x03],
+            ScreenMode::Return => [0x00, 0x04, 0xC4 - 0x04],
+            ScreenMode::Reset => [0x00, 0x01, 0xC8],
         }
     }
 }

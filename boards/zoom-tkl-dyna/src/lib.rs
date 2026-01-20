@@ -17,8 +17,8 @@ use image::AnimationDecoder;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use types::{encode_temperature, Rgb565, ScreenMode, WeatherIcon};
 use zoom_sync_core::{
-    Board, BoardError, BoardInfo, Capabilities, HasGif, HasImage, HasTheme, HasTime, HasWeather,
-    Result,
+    Board, BoardError, BoardInfo, Capabilities, HasGif, HasImage, HasScreenNavigation, HasTheme,
+    HasTime, HasWeather, Result,
 };
 
 pub mod abi;
@@ -30,9 +30,9 @@ pub mod consts {
     pub const VENDOR_ID: u16 = 0x5542;
     /// USB Product ID
     pub const PRODUCT_ID: u16 = 0xC987;
-    /// HID usage page for the Zoom TKL Dyna screen interface
+    /// HID usage page
     pub const USAGE_PAGE: u16 = 65376;
-    /// HID usage for the Zoom TKL Dyna screen interface
+    /// HID usage
     pub const USAGE: u16 = 97;
 }
 
@@ -51,7 +51,7 @@ pub static INFO: BoardInfo = BoardInfo {
         image: true,
         system_info: false,
         screen_pos: false,
-        screen_nav: false,
+        screen_nav: true,
         gif: true,
     },
 };
@@ -216,6 +216,7 @@ impl ZoomTklDyna {
     }
 
     /// Set the screen theme colors.
+    /// For TKL Dyna, this sets the reactive typing color themeing built into the screen.
     pub fn set_theme(&mut self, bg_color: Rgb565, font_color: Rgb565, theme_id: u8) -> Result<()> {
         let packet = abi::theme(bg_color, font_color, theme_id);
         self.execute(packet)
@@ -297,16 +298,16 @@ impl Board for ZoomTklDyna {
         &INFO
     }
 
-    fn as_time(&mut self) -> Option<&mut dyn HasTime> {
-        Some(self)
-    }
-
-    fn as_weather(&mut self) -> Option<&mut dyn HasWeather> {
+    fn as_theme(&mut self) -> Option<&mut dyn HasTheme> {
         Some(self)
     }
 
     fn as_screen_size(&self) -> Option<(u32, u32)> {
         Some((SCREEN_WIDTH, SCREEN_HEIGHT))
+    }
+
+    fn as_screen_nav(&mut self) -> Option<&mut dyn HasScreenNavigation> {
+        Some(self)
     }
 
     fn as_image(&mut self) -> Option<&mut dyn HasImage> {
@@ -317,8 +318,58 @@ impl Board for ZoomTklDyna {
         Some(self)
     }
 
-    fn as_theme(&mut self) -> Option<&mut dyn HasTheme> {
+    fn as_time(&mut self) -> Option<&mut dyn HasTime> {
         Some(self)
+    }
+
+    fn as_weather(&mut self) -> Option<&mut dyn HasWeather> {
+        Some(self)
+    }
+}
+
+impl HasTheme for ZoomTklDyna {
+    fn set_theme(&mut self, bg_color: u16, font_color: u16, theme_id: u8) -> Result<()> {
+        ZoomTklDyna::set_theme(self, Rgb565(bg_color), Rgb565(font_color), theme_id)
+    }
+}
+
+impl HasScreenNavigation for ZoomTklDyna {
+    fn screen_up(&mut self) -> Result<()> {
+        ZoomTklDyna::screen_up(self)
+    }
+    fn screen_down(&mut self) -> Result<()> {
+        ZoomTklDyna::screen_down(self)
+    }
+    fn screen_switch(&mut self) -> Result<()> {
+        ZoomTklDyna::screen_enter(self)
+    }
+    fn screen_reset(&mut self) -> Result<()> {
+        ZoomTklDyna::screen_return(self)
+    }
+}
+
+impl HasImage for ZoomTklDyna {
+    fn upload_image(&mut self, data: &[u8], progress: &mut dyn FnMut(usize)) -> Result<()> {
+        ZoomTklDyna::upload_image(self, data, progress)
+    }
+
+    fn clear_image(&mut self) -> Result<()> {
+        // Send empty termination to clear
+        let packet = abi::image_end();
+        self.execute(packet)
+    }
+}
+
+impl HasGif for ZoomTklDyna {
+    fn upload_gif(&mut self, data: &[u8], progress: &mut dyn FnMut(usize)) -> Result<()> {
+        // Re-encode standard GIF to RGB565 format
+        let encoded = encode_gif(data, [0, 0, 0], false, |_, _| {})
+            .ok_or(BoardError::InvalidMedia("failed to encode gif to rgb565"))?;
+        self.upload_565_animation(&encoded, progress)
+    }
+
+    fn clear_gif(&mut self) -> Result<()> {
+        ZoomTklDyna::clear_gif(self)
     }
 }
 
@@ -341,36 +392,5 @@ impl HasWeather for ZoomTklDyna {
         let icon = WeatherIcon::from_wmo(wmo, is_day)
             .ok_or(BoardError::CommandFailed("unknown WMO code"))?;
         ZoomTklDyna::set_weather(self, icon, current, low, high)
-    }
-}
-
-impl HasImage for ZoomTklDyna {
-    fn upload_image(&mut self, data: &[u8], progress: &mut dyn FnMut(usize)) -> Result<()> {
-        ZoomTklDyna::upload_image(self, data, progress)
-    }
-
-    fn clear_image(&mut self) -> Result<()> {
-        // Send empty termination to clear
-        let packet = abi::image_end();
-        self.execute(packet)
-    }
-}
-
-impl HasTheme for ZoomTklDyna {
-    fn set_theme(&mut self, bg_color: u16, font_color: u16, theme_id: u8) -> Result<()> {
-        ZoomTklDyna::set_theme(self, Rgb565(bg_color), Rgb565(font_color), theme_id)
-    }
-}
-
-impl HasGif for ZoomTklDyna {
-    fn upload_gif(&mut self, data: &[u8], progress: &mut dyn FnMut(usize)) -> Result<()> {
-        // Re-encode standard GIF to RGB565 format
-        let encoded = encode_gif(data, [0, 0, 0], false, |_, _| {})
-            .ok_or(BoardError::InvalidMedia("failed to encode gif to rgb565"))?;
-        self.upload_565_animation(&encoded, progress)
-    }
-
-    fn clear_gif(&mut self) -> Result<()> {
-        ZoomTklDyna::clear_gif(self)
     }
 }
