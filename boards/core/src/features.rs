@@ -50,8 +50,14 @@ pub trait HasTime {
 pub trait HasWeather {
     /// Set weather display. WMO code is converted to board-specific icon internally.
     /// Temperatures are in Celsius - each board converts to its native format.
-    fn set_weather(&mut self, wmo: u8, is_day: bool, current: i16, low: i16, high: i16)
-        -> Result<()>;
+    fn set_weather(
+        &mut self,
+        wmo: u8,
+        is_day: bool,
+        current: i16,
+        low: i16,
+        high: i16,
+    ) -> Result<()>;
 }
 
 /// System info display capability (CPU temp, GPU temp, download speed)
@@ -60,20 +66,19 @@ pub trait HasSystemInfo {
 }
 
 /// Screen position control capability
-pub trait HasScreen {
+pub trait HasScreenPositions {
     /// Available screen positions for this board
     fn screen_positions(&self) -> &'static [ScreenPosition];
     /// Set screen by position ID (e.g., "cpu", "weather", "gif")
     fn set_screen(&mut self, id: &str) -> Result<()>;
+}
+
+/// Screen navigation capability
+pub trait HasScreenNavigation {
     fn screen_up(&mut self) -> Result<()>;
     fn screen_down(&mut self) -> Result<()>;
     fn screen_switch(&mut self) -> Result<()>;
-    fn reset_screen(&mut self) -> Result<()>;
-}
-
-/// Screen dimensions - boards with media support should also implement as_screen_size()
-pub trait HasScreenSize {
-    fn screen_size(&self) -> (u32, u32);
+    fn screen_reset(&mut self) -> Result<()>;
 }
 
 /// Static image upload capability

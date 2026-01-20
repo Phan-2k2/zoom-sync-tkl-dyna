@@ -8,8 +8,9 @@ use float::DumbFloat16;
 use hidapi::{HidApi, HidDevice};
 use types::{Icon, ScreenPosition, ScreenTheme, UploadChannel};
 use zoom_sync_core::{
-    Board, BoardError, BoardInfo, Capabilities, HasGif, HasImage, HasScreen, HasScreenSize,
-    HasSystemInfo, HasTime, HasWeather, Result, ScreenGroup, ScreenPosition as CoreScreenPosition,
+    Board, BoardError, BoardInfo, Capabilities, HasGif, HasImage, HasScreenNavigation,
+    HasScreenPositions, HasSystemInfo, HasTime, HasWeather, Result,
+    ScreenPosition as CoreScreenPosition,
 };
 
 pub mod abi;
@@ -36,70 +37,13 @@ pub static INFO: BoardInfo = BoardInfo {
         time: true,
         weather: true,
         system_info: true,
-        screen: true,
+        screen_pos: true,
+        screen_nav: true,
         image: true,
         gif: true,
         theme: false,
     },
 };
-
-/// Screen positions for this board
-pub static SCREEN_POSITIONS: &[CoreScreenPosition] = &[
-    CoreScreenPosition {
-        id: "cpu",
-        display_name: "CPU Temp",
-        group: ScreenGroup::System,
-    },
-    CoreScreenPosition {
-        id: "gpu",
-        display_name: "GPU Temp",
-        group: ScreenGroup::System,
-    },
-    CoreScreenPosition {
-        id: "download",
-        display_name: "Download",
-        group: ScreenGroup::System,
-    },
-    CoreScreenPosition {
-        id: "time",
-        display_name: "Time",
-        group: ScreenGroup::Time,
-    },
-    CoreScreenPosition {
-        id: "weather",
-        display_name: "Weather",
-        group: ScreenGroup::Time,
-    },
-    CoreScreenPosition {
-        id: "meletrix",
-        display_name: "Meletrix",
-        group: ScreenGroup::Logo,
-    },
-    CoreScreenPosition {
-        id: "zoom65",
-        display_name: "Zoom65",
-        group: ScreenGroup::Logo,
-    },
-    CoreScreenPosition {
-        id: "image",
-        display_name: "Image",
-        group: ScreenGroup::Logo,
-    },
-    CoreScreenPosition {
-        id: "gif",
-        display_name: "GIF",
-        group: ScreenGroup::Logo,
-    },
-    CoreScreenPosition {
-        id: "battery",
-        display_name: "Battery",
-        group: ScreenGroup::Battery,
-    },
-];
-
-/// Screen dimensions
-pub const SCREEN_WIDTH: u32 = 110;
-pub const SCREEN_HEIGHT: u32 = 110;
 
 /// Lazy handle to hidapi
 static API: LazyLock<RwLock<HidApi>> =
@@ -374,6 +318,10 @@ impl Board for Zoom65v3 {
         &INFO
     }
 
+    fn as_screen_size(&self) -> Option<(u32, u32)> {
+        Some((110, 110))
+    }
+
     fn as_time(&mut self) -> Option<&mut dyn HasTime> {
         Some(self)
     }
@@ -386,12 +334,12 @@ impl Board for Zoom65v3 {
         Some(self)
     }
 
-    fn as_screen(&mut self) -> Option<&mut dyn HasScreen> {
+    fn as_screen_nav(&mut self) -> Option<&mut dyn HasScreenNavigation> {
         Some(self)
     }
 
-    fn as_screen_size(&self) -> Option<(u32, u32)> {
-        Some((SCREEN_WIDTH, SCREEN_HEIGHT))
+    fn as_screen_pos(&mut self) -> Option<&mut dyn HasScreenPositions> {
+        Some(self)
     }
 
     fn as_image(&mut self) -> Option<&mut dyn HasImage> {
@@ -410,7 +358,14 @@ impl HasTime for Zoom65v3 {
 }
 
 impl HasWeather for Zoom65v3 {
-    fn set_weather(&mut self, wmo: u8, is_day: bool, current: i16, low: i16, high: i16) -> Result<()> {
+    fn set_weather(
+        &mut self,
+        wmo: u8,
+        is_day: bool,
+        current: i16,
+        low: i16,
+        high: i16,
+    ) -> Result<()> {
         let icon =
             Icon::from_wmo(wmo, is_day).ok_or(BoardError::CommandFailed("unknown WMO code"))?;
         // Clamp to u8 range for this board's protocol
@@ -430,15 +385,28 @@ impl HasSystemInfo for Zoom65v3 {
     }
 }
 
-impl HasScreen for Zoom65v3 {
+impl HasScreenPositions for Zoom65v3 {
     fn screen_positions(&self) -> &'static [CoreScreenPosition] {
-        SCREEN_POSITIONS
+        &[
+            CoreScreenPosition::Cpu,
+            CoreScreenPosition::Gpu,
+            CoreScreenPosition::Download,
+            CoreScreenPosition::Time,
+            CoreScreenPosition::Weather,
+            CoreScreenPosition::Meletrix,
+            CoreScreenPosition::Zoom,
+            CoreScreenPosition::Image,
+            CoreScreenPosition::Gif,
+            CoreScreenPosition::Battery,
+        ]
     }
 
     fn set_screen(&mut self, id: &str) -> Result<()> {
         Zoom65v3::set_screen(self, id.parse().map_err(BoardError::InvalidScreenPosition)?)
     }
+}
 
+impl HasScreenNavigation for Zoom65v3 {
     fn screen_up(&mut self) -> Result<()> {
         Zoom65v3::screen_up(self)
     }
@@ -451,14 +419,8 @@ impl HasScreen for Zoom65v3 {
         Zoom65v3::screen_switch(self)
     }
 
-    fn reset_screen(&mut self) -> Result<()> {
+    fn screen_reset(&mut self) -> Result<()> {
         Zoom65v3::reset_screen(self)
-    }
-}
-
-impl HasScreenSize for Zoom65v3 {
-    fn screen_size(&self) -> (u32, u32) {
-        (SCREEN_WIDTH, SCREEN_HEIGHT)
     }
 }
 

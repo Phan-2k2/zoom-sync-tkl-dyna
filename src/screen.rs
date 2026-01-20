@@ -29,29 +29,54 @@ pub enum ScreenArgs {
     Down,
     /// Switch the screen offset
     Switch,
+    /// Reset the screen to default position
+    Reset,
 }
 
 pub fn apply_screen(args: &ScreenArgs, board: &mut dyn Board) -> Result<(), Box<dyn Error>> {
-    let screen = board
-        .as_screen()
-        .ok_or("board does not support screen control")?;
-
     match args {
         ScreenArgs::Screen(pos_id) => {
+            let screen = board
+                .as_screen_pos()
+                .ok_or("board does not support setting screen position")?;
             let positions = screen.screen_positions();
-            let pos = positions.iter().find(|p| p.id == pos_id.0).ok_or_else(|| {
-                let valid: Vec<_> = positions.iter().map(|p| p.id).collect();
-                format!(
-                    "invalid screen position '{}'. Valid: {}",
-                    pos_id.0,
-                    valid.join(", ")
-                )
-            })?;
-            screen.set_screen(pos.id)?;
-        },
-        ScreenArgs::Up => screen.screen_up()?,
-        ScreenArgs::Down => screen.screen_down()?,
-        ScreenArgs::Switch => screen.screen_switch()?,
+            let pos = positions
+                .iter()
+                .find(|p| p.as_id() == pos_id.0)
+                .ok_or_else(|| {
+                    let valid: Vec<_> = positions.iter().map(|p| p.as_id()).collect();
+                    format!(
+                        "invalid screen position '{}'. Valid: {}",
+                        pos_id.0,
+                        valid.join(", ")
+                    )
+                })?;
+            screen.set_screen(pos.as_id())?;
+        }
+        ScreenArgs::Up => {
+            board
+                .as_screen_nav()
+                .ok_or("board does not support screen navigation")?
+                .screen_up()?;
+        }
+        ScreenArgs::Down => {
+            board
+                .as_screen_nav()
+                .ok_or("board does not support screen navigation")?
+                .screen_down()?;
+        }
+        ScreenArgs::Switch => {
+            board
+                .as_screen_nav()
+                .ok_or("board does not support screen navigation")?
+                .screen_switch()?;
+        }
+        ScreenArgs::Reset => {
+            board
+                .as_screen_nav()
+                .ok_or("board does not support screen navigation")?
+                .screen_reset()?;
+        }
     };
     Ok(())
 }

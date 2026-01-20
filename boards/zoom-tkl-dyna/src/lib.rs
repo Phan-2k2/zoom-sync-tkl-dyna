@@ -50,7 +50,8 @@ pub static INFO: BoardInfo = BoardInfo {
         weather: true,
         image: true,
         system_info: false,
-        screen: false,
+        screen_pos: false,
+        screen_nav: false,
         gif: true,
     },
 };

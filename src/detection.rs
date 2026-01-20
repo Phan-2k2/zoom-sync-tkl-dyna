@@ -5,8 +5,8 @@ use std::str::FromStr;
 use bpaf::Bpaf;
 use hidapi::HidApi;
 use zoom65v3::{Zoom65v3, INFO as ZOOM65V3_INFO};
-use zoom_tkl_dyna::{ZoomTklDyna, INFO as ZOOM_TKL_DYNA_INFO};
 use zoom_sync_core::{Board, BoardError, BoardInfo, Capabilities};
+use zoom_tkl_dyna::{ZoomTklDyna, INFO as ZOOM_TKL_DYNA_INFO};
 
 /// Supported board types
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Bpaf)]
@@ -27,7 +27,7 @@ impl FromStr for BoardKind {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "auto" => Ok(Self::Auto),
-            "zoom65v3" => Ok(Self::Zoom65v3),
+            "zoom65v3" | "65v3" => Ok(Self::Zoom65v3),
             "zoom-tkl-dyna" | "zoomtkldyna" => Ok(Self::ZoomTklDyna),
             _ => Err(format!(
                 "unknown board: {s}. Available: auto, zoom65v3, zoom-tkl-dyna"
@@ -53,10 +53,6 @@ fn matches(device: &hidapi::DeviceInfo, info: &BoardInfo) -> bool {
         && info.usage_page.is_none_or(|up| device.usage_page() == up)
         && info.usage.is_none_or(|u| device.usage() == u)
 }
-
-/// All known board infos for iteration
-#[allow(dead_code)]
-pub const ALL_BOARDS: &[&BoardInfo] = &[&ZOOM65V3_INFO, &ZOOM_TKL_DYNA_INFO];
 
 impl BoardKind {
     /// Get the static board info without connecting
@@ -97,7 +93,8 @@ impl BoardKind {
                             time: true,
                             weather: true,
                             system_info: true,
-                            screen: true,
+                            screen_pos: true,
+                            screen_nav: true,
                             image: true,
                             gif: true,
                             theme: true,
@@ -129,11 +126,5 @@ impl BoardKind {
             BoardKind::Zoom65v3 => Ok(Box::new(Zoom65v3::open()?)),
             BoardKind::ZoomTklDyna => Ok(Box::new(ZoomTklDyna::open()?)),
         }
-    }
-
-    /// List all supported board CLI names
-    #[allow(dead_code)]
-    pub fn supported_boards() -> &'static [&'static str] {
-        &["auto", "zoom65v3", "zoom-tkl-dyna"]
     }
 }

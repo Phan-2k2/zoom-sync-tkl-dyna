@@ -1,6 +1,9 @@
 //! Core Board trait and related types.
 
-use crate::features::{HasGif, HasImage, HasScreen, HasSystemInfo, HasTheme, HasTime, HasWeather};
+use crate::{
+    HasGif, HasImage, HasScreenNavigation, HasScreenPositions, HasSystemInfo, HasTheme, HasTime,
+    HasWeather,
+};
 
 /// Static capability flags for a board (compile-time known)
 #[derive(Debug, Clone, Copy, Default)]
@@ -8,7 +11,8 @@ pub struct Capabilities {
     pub time: bool,
     pub weather: bool,
     pub system_info: bool,
-    pub screen: bool,
+    pub screen_pos: bool,
+    pub screen_nav: bool,
     pub image: bool,
     pub gif: bool,
     pub theme: bool,
@@ -26,21 +30,39 @@ pub struct BoardInfo {
     pub capabilities: Capabilities,
 }
 
-/// Screen position for menu building
+/// Unified enum representing all screen positions across all devices
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ScreenPosition {
-    pub id: &'static str,
-    pub display_name: &'static str,
-    pub group: ScreenGroup,
+pub enum ScreenPosition {
+    // Zoom65v3
+    Cpu,
+    Gpu,
+    Download,
+    Time,
+    Weather,
+    Meletrix,
+    Zoom,
+    Image,
+    Gif,
+    Battery,
+    // Add additional board specific positions here
 }
 
-/// Screen position grouping for menu organization
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ScreenGroup {
-    System,
-    Time,
-    Logo,
-    Battery,
+impl ScreenPosition {
+    /// Get the string identifier for this screen position
+    pub fn as_id(&self) -> &'static str {
+        match self {
+            Self::Cpu => "cpu",
+            Self::Gpu => "gpu",
+            Self::Download => "download",
+            Self::Time => "time",
+            Self::Weather => "weather",
+            Self::Meletrix => "meletrix",
+            Self::Zoom => "zoom",
+            Self::Image => "image",
+            Self::Gif => "gif",
+            Self::Battery => "battery",
+        }
+    }
 }
 
 /// Core board trait - object-safe for `dyn Board`
@@ -48,12 +70,29 @@ pub enum ScreenGroup {
 /// Instance methods (`info`, `as_*`) are object-safe.
 /// Boards should provide a static `INFO` constant and `open()` method separately.
 pub trait Board: Send {
-    // === Object-safe instance methods ===
-
     /// Get board info (instance method for object safety)
     fn info(&self) -> &'static BoardInfo;
 
-    /// Feature opt-in methods - override to return `Some(self)` if feature is supported
+    // Screen navigation features
+    fn as_screen_size(&self) -> Option<(u32, u32)> {
+        None
+    }
+    fn as_screen_nav(&mut self) -> Option<&mut dyn HasScreenNavigation> {
+        None
+    }
+    fn as_screen_pos(&mut self) -> Option<&mut dyn HasScreenPositions> {
+        None
+    }
+
+    // Media features
+    fn as_image(&mut self) -> Option<&mut dyn HasImage> {
+        None
+    }
+    fn as_gif(&mut self) -> Option<&mut dyn HasGif> {
+        None
+    }
+
+    // Information features
     fn as_time(&mut self) -> Option<&mut dyn HasTime> {
         None
     }
@@ -63,18 +102,7 @@ pub trait Board: Send {
     fn as_system_info(&mut self) -> Option<&mut dyn HasSystemInfo> {
         None
     }
-    fn as_screen(&mut self) -> Option<&mut dyn HasScreen> {
-        None
-    }
-    fn as_screen_size(&self) -> Option<(u32, u32)> {
-        None
-    }
-    fn as_image(&mut self) -> Option<&mut dyn HasImage> {
-        None
-    }
-    fn as_gif(&mut self) -> Option<&mut dyn HasGif> {
-        None
-    }
+
     fn as_theme(&mut self) -> Option<&mut dyn HasTheme> {
         None
     }

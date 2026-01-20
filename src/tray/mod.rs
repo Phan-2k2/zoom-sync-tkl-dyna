@@ -279,7 +279,7 @@ async fn async_tray_app(board_kind: BoardKind) -> Result<(), Box<dyn Error>> {
                             println!("reactive mode disabled");
                         } else if let Some(ref mut b) = board {
                             // Enable reactive mode
-                            if let Some(screen) = b.as_screen() {
+                            if let Some(screen) = b.as_screen_pos() {
                                 let _ = screen.set_screen("image");
                             }
                             let board_name = b.info().name.to_lowercase();
@@ -328,7 +328,7 @@ async fn async_tray_app(board_kind: BoardKind) -> Result<(), Box<dyn Error>> {
                         #[cfg(target_os = "linux")]
                         if state.config.general.initial_screen == "reactive" {
                             println!("initializing reactive mode");
-                            if let Some(screen) = b.as_screen() {
+                            if let Some(screen) = b.as_screen_pos() {
                                 let _ = screen.set_screen("image");
                             }
                             let board_name = b.info().name.to_lowercase();
@@ -360,7 +360,7 @@ async fn async_tray_app(board_kind: BoardKind) -> Result<(), Box<dyn Error>> {
                         let skip_initial = false;
 
                         if !skip_initial {
-                            if let Some(screen) = b.as_screen() {
+                            if let Some(screen) = b.as_screen_pos() {
                                 let initial = &state.config.general.initial_screen;
                                 if screen.set_screen(initial).is_ok() {
                                     state.current_screen = Some(initial.clone());
@@ -452,7 +452,7 @@ async fn async_tray_app(board_kind: BoardKind) -> Result<(), Box<dyn Error>> {
                         if matches!(ev.destructure(), evdev::EventSummary::Key(_, _, _)) {
                             is_reactive_running = true;
                             if let Some(ref mut b) = board {
-                                if let Some(screen) = b.as_screen() {
+                                if let Some(screen) = b.as_screen_nav() {
                                     let _ = screen.screen_switch();
                                 }
                             }
@@ -461,8 +461,8 @@ async fn async_tray_app(board_kind: BoardKind) -> Result<(), Box<dyn Error>> {
                     Err(_) if is_reactive_running => {
                         is_reactive_running = false;
                         if let Some(ref mut b) = board {
-                            if let Some(screen) = b.as_screen() {
-                                let _ = screen.reset_screen();
+                            if let Some(screen) = b.as_screen_nav() {
+                                let _ = screen.screen_reset();
                                 let _ = screen.screen_switch();
                                 let _ = screen.screen_switch();
                             }
@@ -503,7 +503,7 @@ async fn handle_command(
             }
 
             if let Some(ref mut b) = board {
-                if let Some(screen) = b.as_screen() {
+                if let Some(screen) = b.as_screen_pos() {
                     match screen.set_screen(id) {
                         Ok(()) => {
                             state.current_screen = Some(id.to_string());

@@ -125,7 +125,7 @@ fn set_command_for(caps: &Capabilities) -> impl Parser<SetCommand> {
         commands.push(Box::new(system));
     }
 
-    if caps.screen {
+    if caps.screen_pos || caps.screen_nav {
         let screen = screen_args()
             .map(SetCommand::Screen)
             .to_options()
@@ -496,7 +496,8 @@ fn generate_docs() {
         time: true,
         weather: true,
         system_info: true,
-        screen: true,
+        screen_pos: true,
+        screen_nav: true,
         image: true,
         gif: true,
         theme: true,
