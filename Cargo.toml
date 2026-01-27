@@ -62,3 +62,6 @@ humantime-serde = "1.1"
 evdev = { version = "0.13.2", features = ["tokio", "stream-trait"] } # reading keypress events on linux
 gtk = "0.18"  # required for tray icon initialization
 
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.61", features = ["Win32_UI_WindowsAndMessaging"] }
+

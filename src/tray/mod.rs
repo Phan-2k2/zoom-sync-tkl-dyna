@@ -4,6 +4,11 @@ use std::error::Error;
 use std::io::{stdout, Seek, Write};
 use std::time::Duration;
 
+#[cfg(target_os = "windows")]
+use windows::Win32::UI::WindowsAndMessaging::{
+    DispatchMessageW, PeekMessageW, TranslateMessage, MSG, PM_REMOVE,
+};
+
 use chrono::DurationRound;
 use either::Either;
 use futures::future::OptionFuture;
@@ -92,6 +97,16 @@ async fn async_tray_app(board_kind: BoardKind) -> Result<(), Box<dyn Error>> {
         gtk::main_iteration_do(false);
     }
 
+    // Process Win32 messages to render tray icon before entering main loop
+    #[cfg(target_os = "windows")]
+    unsafe {
+        let mut msg = MSG::default();
+        while PeekMessageW(&mut msg, None, 0, 0, PM_REMOVE).as_bool() {
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+    }
+
     // Get menu event receiver
     let menu_rx = MenuEvent::receiver();
 
@@ -135,12 +150,22 @@ async fn async_tray_app(board_kind: BoardKind) -> Result<(), Box<dyn Error>> {
 
     loop {
         tokio::select! {
-            // UI polling: GTK events + menu events
+            // UI polling: platform events + menu events
             _ = ui_interval.tick() => {
                 // Process GTK events (required for libappindicator on Linux)
                 #[cfg(target_os = "linux")]
                 while gtk::events_pending() {
                     gtk::main_iteration_do(false);
+                }
+
+                // Process Win32 messages (required for tray-icon/muda on Windows)
+                #[cfg(target_os = "windows")]
+                unsafe {
+                    let mut msg = MSG::default();
+                    while PeekMessageW(&mut msg, None, 0, 0, PM_REMOVE).as_bool() {
+                        TranslateMessage(&msg);
+                        DispatchMessageW(&msg);
+                    }
                 }
 
                 // Process menu events
