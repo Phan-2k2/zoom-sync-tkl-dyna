@@ -42,25 +42,25 @@ pub enum GpuMode {
     Manual(
         /// Manually set GPU temperature
         #[bpaf(short('g'), long("gpu-temp"), argument("TEMP"))]
-        u8,
+        u32,
     ),
 }
 
 impl GpuMode {
-    pub fn either(&self) -> Either<GpuTemp, u8> {
+    pub fn either(&self) -> Either<GpuStats, u32> {
         match self {
-            GpuMode::Id(i) => Either::Left(GpuTemp::new(*i)),
+            GpuMode::Id(i) => Either::Left(GpuStats::new(*i)),
             GpuMode::Manual(v) => Either::Right(*v),
         }
     }
 }
 
 /// Helper struct to track gpu temperature
-pub struct GpuTemp {
+pub struct GpuStats {
     maybe_device: Option<Device<'static>>,
 }
 
-impl GpuTemp {
+impl GpuStats {
     /// Construct a new gpu temperature monitor, optionally selecting by device index
     pub fn new(index: u32) -> Self {
         static NVML: LazyLock<Option<Nvml>> = LazyLock::new(|| {
@@ -83,17 +83,24 @@ impl GpuTemp {
     }
 
     // Refresh and poll the current temperature
-    pub fn get_temp(&self, farenheit: bool) -> Option<u8> {
+    pub fn get_temp(&self, farenheit: bool) -> Option<u32> {
         self.maybe_device
             .as_ref()
             .and_then(|d| d.temperature(TemperatureSensor::Gpu).ok())
             .map(|v| {
                 if farenheit {
-                    (v as f64 * 9. / 5. + 32.) as u8
+                    (v as f64 * 9. / 5. + 32.) as u32
                 } else {
-                    v as u8
+                    v as u32
                 }
             })
+    }
+
+    // Refresh and poll the current GPU temperature
+    pub fn get_fanspeed(&self) -> Option<u32> {
+        self.maybe_device
+            .as_ref()
+            .and_then(|d| d.fan_speed_rpm(0).ok())
     }
 }
 
@@ -171,7 +178,7 @@ pub fn apply_system(
     board: &mut dyn Board,
     farenheit: bool,
     cpu: &mut Either<CpuTemp, u8>,
-    gpu: &Either<GpuTemp, u8>,
+    gpu: &Either<GpuStats, u32>,
     download: Option<f32>,
 ) -> Result<(), Box<dyn Error>> {
     let system_info = board
@@ -198,10 +205,16 @@ pub fn apply_system(
         gpu_temp = 99;
     }
 
+    let mut gpu_fan_speed = gpu
+        .as_ref()
+        .map_left(|g| g.get_fanspeed().unwrap_or_default())
+        .map_right(|v| *v)
+        .into_inner();
+
     let download = download.unwrap_or_default();
 
     system_info
-        .set_system_info(cpu_temp, gpu_temp, download)
+        .set_system_info(cpu_temp, gpu_temp, download, gpu_fan_speed)
         .map_err(|e| format!("failed to set system info: {e}"))?;
     println!(
         "updated system info {{ cpu_temp: {cpu_temp}, gpu_temp: {gpu_temp}, download: {download} }}"
