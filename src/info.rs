@@ -61,7 +61,8 @@ pub struct GpuStats {
 }
 
 impl GpuStats {
-    /// Construct a new gpu temperature monitor, optionally selecting by device index
+    /// Construct a new gpu monitor, optionally selecting by device index.
+    /// Handles both gpu temp and gpu fan speeds.
     pub fn new(index: u32) -> Self {
         static NVML: LazyLock<Option<Nvml>> = LazyLock::new(|| {
             let nvml = Nvml::init().ok();
@@ -211,13 +212,18 @@ pub fn apply_system(
         .map_right(|v| *v)
         .into_inner();
 
+    if gpu_fan_speed >= 10000 {
+        eprintln!("warning: actual fan speed at {gpu_fan_speed}. clamping to 9999");
+        gpu_fan_speed = 9999;
+    }
+
     let download = download.unwrap_or_default();
 
     system_info
         .set_system_info(cpu_temp, gpu_temp, download, gpu_fan_speed)
         .map_err(|e| format!("failed to set system info: {e}"))?;
     println!(
-        "updated system info {{ cpu_temp: {cpu_temp}, gpu_temp: {gpu_temp}, download: {download} }}"
+        "updated system info {{ cpu_temp: {cpu_temp}, gpu_temp: {gpu_temp}, download: {download}, gpu_fan_speed: {gpu_fan_speed} }}"
     );
 
     Ok(())
