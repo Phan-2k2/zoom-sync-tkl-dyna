@@ -222,7 +222,14 @@ impl ZoomTklDyna {
         download_rate: f32,
         gpu_fan_speed: u32,
     ) -> Result<()> {
-        let packet = abi::set_system_info(cpu_temp, gpu_temp, download_rate, gpu_fan_speed);
+
+        let mut gpu_fan_speed_adjusted = gpu_fan_speed;
+        if gpu_fan_speed >= 10000 {
+            eprintln!("warning: actual fan speed at {gpu_fan_speed}. clamping to 9999");
+            gpu_fan_speed_adjusted = 9999;
+        }
+
+        let packet = abi::set_system_info(cpu_temp, gpu_temp, download_rate, gpu_fan_speed_adjusted);
         self.execute(packet)
     }
 

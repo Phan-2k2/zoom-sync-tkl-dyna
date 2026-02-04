@@ -122,7 +122,7 @@ async fn async_tray_app(board_kind: BoardKind) -> Result<(), Box<dyn Error>> {
 
     // Temperature monitors (initialized when board connects)
     let mut cpu: Option<Either<CpuTemp, u8>> = None;
-    let mut gpu: Option<Either<GpuStats, u32>> = None;
+    let mut gpu: Option<Either<GpuStats, (u32, u32)>> = None;
 
     // Weather args
     let mut weather_args = build_weather_args(&state.config);
@@ -492,7 +492,7 @@ async fn handle_command(
     state: &mut TrayState,
     menu_items: &menu::MenuItems,
     cpu: &mut Option<Either<CpuTemp, u8>>,
-    gpu: &mut Option<Either<GpuStats, u32>>,
+    gpu: &mut Option<Either<GpuStats, (u32, u32)>>,
     weather_args: &mut crate::weather::WeatherArgs,
 ) -> CommandResult {
     match cmd {
