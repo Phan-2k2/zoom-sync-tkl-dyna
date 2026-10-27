@@ -669,6 +669,10 @@ async fn handle_command(
             }
             menu_items.update_from_state(state, board);
         },
+
+        TrayCommand::RefreshSystem => {
+            handle_disconnect(board, state, menu_items);
+        }
     }
 
     CommandResult::Continue

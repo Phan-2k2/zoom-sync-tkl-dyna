@@ -25,6 +25,8 @@ pub enum TrayCommand {
     ClearGif,
     /// Clear all media
     ClearAllMedia,
+    /// Refresh System,
+    RefreshSystem,
     /// Reload config from file
     ReloadConfig,
     /// Quit the application

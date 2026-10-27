@@ -42,7 +42,8 @@ pub mod ids {
     // Config
     pub const OPEN_CONFIG: &str = "open_config";
     pub const RELOAD_CONFIG: &str = "reload_config";
-
+    
+    pub const REFRESH_SYSTEM: &str = "refresh_system";
     // App
     pub const QUIT: &str = "quit";
 }
@@ -389,6 +390,13 @@ pub fn build_menu(state: &TrayState) -> MenuItems {
     menu.append(&PredefinedMenuItem::separator()).unwrap();
 
     // About and Quit
+    menu.append(&MenuItem::with_id(
+        ids::REFRESH_SYSTEM,
+        "Refresh System",
+        true,
+        None::<Accelerator>,
+    ))
+    .unwrap();
     menu.append(&PredefinedMenuItem::about(
         Some("About Zoom Sync"),
         Some(AboutMetadata {
@@ -489,6 +497,7 @@ pub fn handle_menu_event(event: MenuEvent) -> MenuAction {
             MenuAction::None
         },
         ids::RELOAD_CONFIG => MenuAction::Command(TrayCommand::ReloadConfig),
+        ids::REFRESH_SYSTEM => MenuAction::Command(TrayCommand::RefreshSystem),
 
         // Quit
         ids::QUIT => MenuAction::Command(TrayCommand::Quit),
